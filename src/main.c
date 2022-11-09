@@ -7,11 +7,19 @@ int main(int arch, const char* argv[]) {
 
 	initChunk(&chunk);
 
-	int constant = addConstant(&chunk, 1.2);
-	writeChunk(&chunk, OP_CONSTANT, 123);
-	writeChunk(&chunk, constant, 123);
+	int constant1 = addConstant(&chunk, 0.1);
+	writeChunk(&chunk, OP_CONSTANT);
+	writeChunk(&chunk, constant1);
+	addLine(&chunk, 122, 2);
 
-	writeChunk(&chunk, OP_RETURN, 123);
+	int constant = addConstant(&chunk, 1.2);
+	writeChunk(&chunk, OP_CONSTANT);
+	writeChunk(&chunk, constant);
+	addLine(&chunk, 123, 2);
+
+	writeChunk(&chunk, OP_RETURN);
+	addLine(&chunk, 123, 1);
+
 
 	disassembleChunk(&chunk, "test chunk");
 	freeChunk(&chunk);
