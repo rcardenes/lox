@@ -14,12 +14,13 @@ typedef struct {
 	int count;
 	int capacity;
 	uint8_t* code;
+	int* lines;
 	ValueArray constants;
 } Chunk;
 
 void initChunk(Chunk*);
 void freeChunk(Chunk*);
-void writeChunk(Chunk*, uint8_t);
+void writeChunk(Chunk*, uint8_t, int);
 int addConstant(Chunk*, Value);
 
 #endif // vlox_chunk_h
