@@ -48,7 +48,7 @@ void freeChunk(Chunk* chunk) {
 	initChunk(chunk);
 }
 
-void writeChunk(Chunk* chunk, uint8_t byte) {
+void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 	if (chunk->capacity < (chunk->count + 1)) {
 		int oldCapacity = chunk->capacity;
 		chunk->capacity = GROW_CAPACITY(oldCapacity);
@@ -58,6 +58,27 @@ void writeChunk(Chunk* chunk, uint8_t byte) {
 
 	chunk->code[chunk->count] = byte;
 	chunk->count++;
+
+	if (line >= 0) {
+		addLine(chunk, line, 1);
+	}
+}
+
+void writeConstant(Chunk* chunk, Value value, int line) {
+	int index = addConstant(chunk, value);
+
+	if (index < 256) {
+		writeChunk(chunk, OP_CONSTANT, -1);
+		writeChunk(chunk, index, -1);
+		addLine(chunk, line, 2);
+	}
+	else {
+		writeChunk(chunk, OP_CONSTANT_LONG, -1);
+		writeChunk(chunk, (index & 0xFF), -1);
+		writeChunk(chunk, (index & 0xFF00) >> 8, -1);
+		writeChunk(chunk, (index & 0xFF0000) >> 16, -1);
+		addLine(chunk, line, 4);
+	}
 }
 
 int addConstant(Chunk* chunk, Value value) {
