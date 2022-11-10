@@ -40,6 +40,12 @@ static InterpretResult run() {
 #define READ_24BIT_INT() (read_24bit_int())
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_LONG_CONSTANT() (vm.chunk->constants.values[READ_24BIT_INT()])
+#define BINARY_OP(op) \
+	do { \
+		double b = pop(); \
+		double a = pop(); \
+		push(a op b); \
+	} while (false)
 
 	for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -67,6 +73,11 @@ static InterpretResult run() {
 					push(constant);
 				}
 				break;
+			case OP_ADD: BINARY_OP(+); break;
+			case OP_SUBTRACT: BINARY_OP(-); break;
+			case OP_MULTIPLY: BINARY_OP(*); break;
+			case OP_DIVIDE: BINARY_OP(/); break;
+			case OP_NEGATE: push(-pop()); break;
 			case OP_RETURN:
 				{
 					printValue(pop());
@@ -81,6 +92,7 @@ static InterpretResult run() {
 #undef READ_24BIT_INT
 #undef READ_CONSTANT
 #undef READ_LONG_CONSTANT
+#undef BINARY_OP
 }
 
 InterpretResult interpret(Chunk* chunk) {
