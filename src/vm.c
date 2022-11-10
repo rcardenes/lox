@@ -40,11 +40,13 @@ static InterpretResult run() {
 #define READ_24BIT_INT() (read_24bit_int())
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_LONG_CONSTANT() (vm.chunk->constants.values[READ_24BIT_INT()])
+#define PEEK() (*(vm.stackTop - 1))
+#define REPLACE(val) do { *(vm.stackTop - 1) = (val); } while (false)
 #define BINARY_OP(op) \
 	do { \
 		double b = pop(); \
-		double a = pop(); \
-		push(a op b); \
+		double a = PEEK(); \
+		REPLACE(a op b); \
 	} while (false)
 
 	for (;;) {
@@ -77,7 +79,7 @@ static InterpretResult run() {
 			case OP_SUBTRACT: BINARY_OP(-); break;
 			case OP_MULTIPLY: BINARY_OP(*); break;
 			case OP_DIVIDE: BINARY_OP(/); break;
-			case OP_NEGATE: push(-pop()); break;
+			case OP_NEGATE: REPLACE(-PEEK()); break;
 			case OP_RETURN:
 				{
 					printValue(pop());
