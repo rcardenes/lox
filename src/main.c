@@ -10,12 +10,8 @@ int main(int arch, const char* argv[]) {
 
 	initChunk(&chunk);
 
-	int i;
-
-	for (i = 0; i < 258; i++) {
-		writeConstant(&chunk, i * 1.2, i+1);
-	}
-	writeChunk(&chunk, OP_RETURN, i);
+	writeConstant(&chunk, 1.2, 123);
+	writeChunk(&chunk, OP_RETURN, 123);
 
 	// disassembleChunk(&chunk, "test chunk");
 	interpret(&chunk);
