@@ -1,5 +1,7 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include "debug.h"
+#include "memory.h"
 #include "vm.h"
 
 VM vm;
@@ -9,13 +11,26 @@ static void resetStack() {
 }
 
 void initVM() {
+	vm.stack = (Value*)reallocate(NULL, 0, sizeof(Value) * STACK_SLICE_SIZE);
+	vm.stackLimit = vm.stack + STACK_SLICE_SIZE;
 	resetStack();
 }
 
 void freeVM() {
+	free(vm.stack);
 }
 
 void push(Value value) {
+	if (vm.stackTop == vm.stackLimit) {
+		int size = vm.stackLimit - vm.stack;
+		int newSize = size + STACK_SLICE_SIZE;
+		Value *newStack = GROW_ARRAY(Value, vm.stack, size, newSize);
+		if (newStack != vm.stack) {
+			vm.stack = newStack;
+			vm.stackTop = vm.stack + size;
+		}
+		vm.stackLimit = vm.stack + newSize;
+	}
 	*vm.stackTop = value;
 	vm.stackTop++;
 }
