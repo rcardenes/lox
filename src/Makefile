@@ -6,7 +6,7 @@ TARGETS := vlox
 TARGETSRC := $(patsubst %,%.c,$(TARGETS))
 TARGETDIR := ../bin
 BUILDDIR := ../build
-LOCALDEPS := main.c chunk.c memory.c debug.c value.c
+LOCALDEPS := main.c chunk.c memory.c debug.c value.c vm.c
 OBJFILES := $(patsubst %.c,%.o,$(patsubst %,$(BUILDDIR)/%,$(LOCALDEPS)))
 SOURCES := $(TARGETSRC) $(LOCALDEPS)
 DEPFILES := $(SOURCES:%.c=$(DEPDIR)/%.d)
@@ -14,7 +14,7 @@ OBJTARGET := $(patsubst %,$(TARGETDIR)/%,$(TARGETS))
 
 NODEPS := clean
 
-CFLAGS := -Wall -Wpedantic -g -I ../common
+CFLAGS := -std=c11 -Wall -Wpedantic -g -I ../common
 
 all: $(TARGETDIR) $(BUILDDIR) $(OBJTARGET)
 
@@ -33,8 +33,6 @@ $(TARGETDIR) $(BUILDDIR): ; mkdir -p $@
 
 $(BUILDDIR)/%.o: %.c
 $(BUILDDIR)/%.o: %.c $(DEPDIR)/%.d | $(DEPDIR)
-	echo Targets: $(TARGETS)
-	echo Objtarget: $(OBJTARGET)
 	$(CC) $(DEPFLAGS) $(CFLAGS) -o $@ -c $<
 
 $(DEPDIR): ; @mkdir -p $@
