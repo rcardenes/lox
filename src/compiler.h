@@ -1,6 +1,8 @@
 #ifndef vlox_compiler_h
 #define vlox_compiler_h
 
-void compile(const char*);
+#include "vm.h"
+
+bool compile(const char*, Chunk*);
 
 #endif // vlox_compiler_h
