@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
@@ -30,9 +31,11 @@ void initVM() {
 	vm.stack = (Value*)reallocate(NULL, 0, sizeof(Value) * STACK_SLICE_SIZE);
 	vm.stackLimit = vm.stack + STACK_SLICE_SIZE;
 	resetStack();
+	vm.objects = NULL;
 }
 
 void freeVM() {
+	freeObjects();
 	free(vm.stack);
 }
 
@@ -71,8 +74,26 @@ inline Value peek(int distance) {
 	return vm.stackTop[-1 - distance];
 }
 
+static
+inline void replace(Value val) {
+	*(vm.stackTop - 1) = val;
+}
+
 static bool isFalsey(Value value) {
 	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+static void concatenate() {
+	ObjString* b = AS_STRING(pop());
+	ObjString* a = AS_STRING(peek(0));
+	int length = a->length + b->length;
+	char* chars = ALLOCATE(char, length + 1);
+	memcpy(chars, a->chars, a->length);
+	memcpy(chars + a->length, b->chars, b->length);
+	chars[length] = '\0';
+
+	ObjString* result = takeString(chars, length);
+	replace(OBJ_VAL(result));
 }
 
 static InterpretResult run() {
@@ -80,7 +101,6 @@ static InterpretResult run() {
 #define READ_24BIT_INT() (read_24bit_int())
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_LONG_CONSTANT() (vm.chunk->constants.values[READ_24BIT_INT()])
-#define REPLACE(val) do { *(vm.stackTop - 1) = (val); } while (false)
 #define BINARY_OP(retType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -89,7 +109,7 @@ static InterpretResult run() {
 		} \
 		double b = AS_NUMBER(pop()); \
 		double a = AS_NUMBER(peek(0)); \
-		REPLACE(retType(a op b)); \
+		replace(retType(a op b)); \
 	} while (false)
 
 	for (;;) {
@@ -122,33 +142,46 @@ static InterpretResult run() {
 			case OP_EQUAL: {
 				       Value b = pop();
 				       Value a = peek(0);
-				       REPLACE(BOOL_VAL(valuesEqual(a, b)));
+				       replace(BOOL_VAL(valuesEqual(a, b)));
 				       break;
 			       }
 			case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
 			case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-			case OP_ADD: BINARY_OP(NUMBER_VAL, +); break;
+			case OP_ADD: {
+			     if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+				     concatenate();
+			     }
+			     else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+				     double b = AS_NUMBER(pop());
+				     double a = AS_NUMBER(peek(0));
+				     replace(NUMBER_VAL(a + b));
+			     }
+			     else {
+				     runtimeError("Operands must be two numbers or two strings.");
+				     return INTERPRET_RUNTIME_ERROR;
+			     }
+			     break;
+			}
 			case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
 			case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
 			case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
 			case OP_NOT:
-				REPLACE(BOOL_VAL(isFalsey(peek(0))));
+				replace(BOOL_VAL(isFalsey(peek(0))));
 				break;
 			case OP_NEGATE: {
-					Value constant = peek(0);
-					if (!IS_NUMBER(constant)) {
-						runtimeError("Operand must be a number.");
-						return INTERPRET_RUNTIME_ERROR;
-					}
-					REPLACE(NUMBER_VAL(-AS_NUMBER(constant)));
+				Value constant = peek(0);
+				if (!IS_NUMBER(constant)) {
+					runtimeError("Operand must be a number.");
+					return INTERPRET_RUNTIME_ERROR;
 				}
+				replace(NUMBER_VAL(-AS_NUMBER(constant)));
 				break;
+			}
 			case OP_RETURN: {
-					printValue(pop());
-					printf("\n");
-					return INTERPRET_OK;
-				}
-				break;
+				printValue(pop());
+				printf("\n");
+				return INTERPRET_OK;
+			}
 		}
 	}
 

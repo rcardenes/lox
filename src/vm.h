@@ -12,7 +12,10 @@ typedef struct {
 	Value* stack;
 	Value* stackLimit;
 	Value* stackTop;
+	Obj* objects;
 } VM;
+
+extern VM vm;
 
 typedef enum {
 	INTERPRET_OK,
