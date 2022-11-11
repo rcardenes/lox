@@ -84,16 +84,14 @@ static bool isFalsey(Value value) {
 }
 
 static void concatenate() {
-	ObjString* b = AS_STRING(pop());
-	ObjString* a = AS_STRING(peek(0));
-	int length = a->length + b->length;
-	char* chars = ALLOCATE(char, length + 1);
-	memcpy(chars, a->chars, a->length);
-	memcpy(chars + a->length, b->chars, b->length);
-	chars[length] = '\0';
+	StringList sl;
 
-	ObjString* result = takeString(chars, length);
+	initStringList(&sl);
+	addStringToList(&sl, AS_STRING(pop()));
+	addStringToList(&sl, AS_STRING(peek(0)));
+	ObjString* result= copyStrings(&sl);
 	replace(OBJ_VAL(result));
+	resetStringList(&sl);
 }
 
 static InterpretResult run() {

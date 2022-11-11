@@ -93,7 +93,6 @@ static void consume(TokenType type, const char* message) {
 }
 
 static void emitByte(uint8_t byte) {
-	printf("Emit byte at line %d\n", parser.previous.line);
 	writeChunk(currentChunk(), byte, parser.previous.line);
 }
 

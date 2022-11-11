@@ -75,10 +75,10 @@ static void skipWhitespace() {
 	for (;;) {
 		char c = peek();
 		switch (c) {
-			case ' ':
 			case '\r':
 			case '\n':
 				scanner.line++;
+			case ' ':
 				advance();
 				break;
 			case '/':
