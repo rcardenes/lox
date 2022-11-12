@@ -32,9 +32,11 @@ void initVM() {
 	vm.stackLimit = vm.stack + STACK_SLICE_SIZE;
 	resetStack();
 	vm.objects = NULL;
+	initTable(&vm.strings);
 }
 
 void freeVM() {
+	freeTable(&vm.strings);
 	freeObjects();
 	free(vm.stack);
 }

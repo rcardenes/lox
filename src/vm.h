@@ -2,6 +2,7 @@
 #define vlox_vm_h
 
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 #define STACK_SLICE_SIZE 256
@@ -12,6 +13,7 @@ typedef struct {
 	Value* stack;
 	Value* stackLimit;
 	Value* stackTop;
+	Table strings;
 	Obj* objects;
 } VM;
 
