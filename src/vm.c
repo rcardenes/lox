@@ -90,7 +90,7 @@ static void concatenate() {
 
 	initStringList(&sl);
 	addStringToList(&sl, AS_STRING(pop()));
-	addStringToList(&sl, AS_STRING(peek(0)));
+	prependStringToList(&sl, AS_STRING(peek(0)));
 	ObjString* result= copyStrings(&sl);
 	replace(OBJ_VAL(result));
 	resetStringList(&sl);

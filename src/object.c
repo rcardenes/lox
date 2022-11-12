@@ -130,6 +130,18 @@ void addStringToList(StringList* list, ObjString* string) {
 	list->totalLength += string->length;
 }
 
+void prependStringToList(StringList* list, ObjString* string) {
+	StringListNode* node = ALLOCATE(StringListNode, 1);
+	node->string = string;
+	node->next = list->first;
+	list->first = node;
+
+	if (!list->last) {
+		list->last = node;
+	}
+	list->totalLength += string->length;
+}
+
 void resetStringList(StringList* list) {
 	StringListNode* current = list->first;
 	while (current != NULL) {

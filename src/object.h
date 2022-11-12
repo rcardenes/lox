@@ -51,6 +51,7 @@ ObjString* copyString(const char*, int);
 void printObject(Value);
 void initStringList(StringList*);
 void addStringToList(StringList*, ObjString*);
+void prependStringToList(StringList*, ObjString*);
 void resetStringList(StringList*);
 
 static inline bool isObjType(Value value, ObjType type) {
