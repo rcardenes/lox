@@ -51,6 +51,7 @@ ObjString* copyString(const char* chars, int length) {
 	memcpy(string->buffer, chars, length);
 	string->buffer[length] = '\0';
 	string->string.chars = string->buffer;
+	tableSet(&vm.strings, (ObjString*)string, NIL_VAL);
 
 	return (ObjString*)string;
 }
@@ -79,6 +80,7 @@ ObjString* copyStrings(StringList* list) {
 	}
 
 	((ObjString*)string)->hash = hash;
+	tableSet(&vm.strings, (ObjString*)string, NIL_VAL);
 
 	return (ObjString*)string;
 }
@@ -96,6 +98,7 @@ ObjString* takeString(char* chars, int length) {
 
 	ObjString* string = allocateString(length, hash, false);
 	string->chars = chars;
+	tableSet(&vm.strings, (ObjString*)string, NIL_VAL);
 
 	return string;
 }

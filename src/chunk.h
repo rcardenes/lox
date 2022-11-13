@@ -11,6 +11,15 @@ typedef enum {
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
+	OP_POP,
+	OP_GET_LOCAL,
+	OP_GET_GLOBAL,
+	OP_GET_GLOBAL_LONG,
+	OP_DEFINE_GLOBAL,
+	OP_DEFINE_GLOBAL_LONG,
+	OP_SET_LOCAL,
+	OP_SET_GLOBAL,
+	OP_SET_GLOBAL_LONG,
 	OP_EQUAL,
 	OP_GREATER,
 	OP_LESS,
@@ -20,6 +29,7 @@ typedef enum {
 	OP_DIVIDE,
 	OP_NOT,
 	OP_NEGATE,
+	OP_PRINT,
 	OP_RETURN
 } OpCode;
 
@@ -42,6 +52,11 @@ typedef struct {
 	LineArray lines;
 	ValueArray constants;
 } Chunk;
+
+typedef struct {
+	bool shortIndex;
+	uint32_t index;
+} ConstIndex;
 
 void initChunk(Chunk*);
 void freeChunk(Chunk*);
