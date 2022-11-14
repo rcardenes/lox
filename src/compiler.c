@@ -216,7 +216,7 @@ static bool identifiersEqual(Token* a, Token* b) {
 }
 
 static ConstIndex resolveLocal(Compiler* compiler, Token* name) {
-	ConstIndex ret = {-1, true};
+	ConstIndex ret = {true, -1};
 	for (int i = compiler->localCount - 1; i >= 0; i--) {
 		Local* local = &compiler->locals[i];
 		if (identifiersEqual(name, &local->name)) {
