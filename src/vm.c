@@ -119,10 +119,15 @@ static InterpretResult run() {
 	for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
 		printf("          ");
-		for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
-			printf("[ ");
-			printValue(*slot);
-			printf(" ]");
+		if (vm.stackTop == vm.stack) {
+			printf("empty_stack");
+		}
+		else {
+			for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
+				printf("[ ");
+				printValue(*slot);
+				printf(" ]");
+			}
 		}
 		printf("\n");
 		disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
@@ -178,6 +183,12 @@ static InterpretResult run() {
 				}
 				break;
 			}
+			case OP_EQUAL_NO_POP: {
+				       Value b = peek(0);
+				       Value a = peek(-1);
+				       replace(BOOL_VAL(valuesEqual(a, b)));
+				       break;
+			       }
 			case OP_EQUAL: {
 				       Value b = pop();
 				       Value a = peek(0);

@@ -435,6 +435,7 @@ static ParseRule rules[] = {
 	[TOKEN_OR]		= {NULL,	or_, PREC_OR},
 	[TOKEN_PRINT]		= {NULL,	NULL, PREC_NONE},
 	[TOKEN_RETURN]		= {NULL,	NULL, PREC_NONE},
+	[TOKEN_SWITCH]		= {NULL,	NULL, PREC_NONE},
 	[TOKEN_SUPER]		= {NULL,	NULL, PREC_NONE},
 	[TOKEN_THIS]		= {NULL,	NULL, PREC_NONE},
 	[TOKEN_TRUE]		= {literal,	NULL, PREC_NONE},
@@ -571,6 +572,92 @@ void printStatement() {
 	emitByte(OP_PRINT);
 }
 
+static void switchStatement() {
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+	expression();
+	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+	consume(TOKEN_LEFT_BRACE, "Expect '{' after switch expression.");
+
+	int nCases = 0;
+	int cases[UINT8_MAX];
+	for (int i = 0; i < UINT8_MAX; i++) {
+		cases[i] = -1;
+	}
+
+	bool inCase = false;
+	bool inDefault = false;
+	while (!match(TOKEN_RIGHT_BRACE)) {
+		if (match(TOKEN_CASE)) {
+			inCase = true;
+			if (inDefault) {
+				error("Unexpected 'case' after 'default'.");
+				return;
+			}
+			else if (nCases >= UINT8_MAX) {
+				error("More than 256 case clauses in a switch are not allowed.");
+				return;
+			}
+			else if (nCases > 0) {
+				int jumpHere = cases[nCases - 1];
+				cases[nCases - 1] = emitJump(OP_JUMP);
+				patchJump(jumpHere);
+				emitByte(OP_POP);
+			}
+
+			expression();
+			consume(TOKEN_COLON, "Expected ':' after case expression.");
+			emitByte(OP_EQUAL_NO_POP);
+			cases[nCases++] = emitJump(OP_JUMP_IF_FALSE);
+			emitByte(OP_POP);
+		}
+		else if (match(TOKEN_DEFAULT)) {
+			inCase = true;
+			if (inDefault) {
+				error("Duplicate 'default'.");
+				return;
+			}
+			consume(TOKEN_COLON, "Expected ':' after 'default'.");
+			if (nCases > 0) {
+				int jumpHere = cases[nCases - 1];
+				cases[nCases - 1] = emitJump(OP_JUMP);
+				patchJump(jumpHere);
+				emitByte(OP_POP);
+			}
+		}
+		else {
+			if (!inCase) {
+				error("Code outside 'case' or 'default' clauses.");
+				return;
+			}
+			statement();
+		}
+	}
+
+	if (nCases > 0) {
+		for (int i = 0; i < nCases; i++) {
+			patchJump(cases[i]);
+		}
+		if (!inDefault) {
+			emitByte(OP_POP);
+		}
+	}
+	emitByte(OP_POP);
+
+	/*
+	int thenJump = emitJump(OP_JUMP_IF_FALSE);
+	emitByte(OP_POP);
+	statement();
+
+	int elseJump = emitJump(OP_JUMP);
+
+	patchJump(thenJump);
+	emitByte(OP_POP);
+
+	if (match(TOKEN_ELSE)) statement();
+	patchJump(elseJump);
+	*/
+}
+
 void whileStatement() {
 	int loopStart = currentChunk()->count;
 	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
@@ -600,6 +687,7 @@ void synchronize() {
 			case TOKEN_WHILE:
 			case TOKEN_PRINT:
 			case TOKEN_RETURN:
+			case TOKEN_SWITCH:
 				return;
 
 			default:
@@ -619,6 +707,9 @@ void statement() {
 	}
 	else if (match(TOKEN_IF)) {
 		ifStatement();
+	}
+	else if (match(TOKEN_SWITCH)) {
+		switchStatement();
 	}
 	else if (match(TOKEN_WHILE)) {
 		whileStatement();
