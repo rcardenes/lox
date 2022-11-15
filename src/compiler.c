@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -44,10 +45,29 @@ typedef struct {
 	int depth;
 } Local;
 
+typedef enum {
+	BREAK,
+	CONTINUE
+} LoopJumpType;
+
+typedef struct LoopJump {
+	struct LoopJump *next;
+	LoopJumpType type;
+	int index;
+} LoopJump;
+
+typedef struct LoopContext {
+	struct LoopContext* outer;
+	LoopJump* jumps;
+	int start;
+	int depth;
+} LoopContext;
+
 typedef struct {
 	Local locals[UINT8_COUNT];
 	int localCount;
 	int scopeDepth;
+	LoopContext* currentLoop;
 } Compiler;
 
 Parser parser;
@@ -502,6 +522,77 @@ static void expressionStatement() {
 	emitByte(OP_POP);
 }
 
+static void emitLoopJump(LoopJumpType type) {
+	LoopContext* context = current->currentLoop;
+
+	if (current->localCount > 0) {
+		for (int i = current->localCount - 1; i >= 0 && (current->locals[i].depth > context->depth); i--) {
+			emitByte(OP_POP);
+		}
+	}
+
+	if (type == BREAK) {
+		LoopJump* jump = ALLOCATE(LoopJump, 1);
+		jump->next = context->jumps;
+		jump->type = type;
+		jump->index = emitJump(OP_JUMP);
+
+		context->jumps = jump;
+	}
+	else {
+		emitLoop(context->start);
+	}
+}
+
+static void breakStatement() {
+	consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
+
+	if (!current->currentLoop) {
+		error("Found 'break' outside a loop.");
+	}
+	else {
+		emitLoopJump(BREAK);
+	}
+}
+
+static void continueStatement() {
+	consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+
+	if (!current->currentLoop) {
+		error("Found 'continue' outside a loop.");
+	}
+	else {
+		emitLoopJump(CONTINUE);
+	}
+}
+
+static void beginLoop(int loopStart) {
+	LoopContext* context = ALLOCATE(LoopContext, 1);
+	context->outer = current->currentLoop;
+	context->jumps = NULL;
+	context->start = loopStart;
+	context->depth = current->scopeDepth;
+	current->currentLoop = context;
+}
+
+static void endLoop() {
+	LoopContext* context = current->currentLoop;
+
+	if (context != NULL) { // Shouldn't happen, but just in case...
+		LoopJump* currentJump = context->jumps;
+		while (currentJump != NULL) {
+			if (currentJump->type == BREAK) {
+				patchJump(currentJump->index);
+			}
+			LoopJump* next = currentJump->next;
+			FREE(LoopJump, currentJump);
+			currentJump = next;
+		}
+		current->currentLoop = context->outer;
+		FREE(LoopContext, context);
+	}
+}
+
 static void forStatement() {
 	beginScope();
 	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
@@ -538,9 +629,11 @@ static void forStatement() {
 		patchJump(bodyJump);
 	}
 
+	beginLoop(loopStart);
 	statement();
 	emitLoop(loopStart);
 
+	endLoop();
 	if (exitJump != -1) {
 		patchJump(exitJump);
 		emitByte(OP_POP);
@@ -591,11 +684,9 @@ static void switchStatement() {
 			inCase = true;
 			if (inDefault) {
 				error("Unexpected 'case' after 'default'.");
-				return;
 			}
 			else if (nCases >= UINT8_MAX) {
 				error("More than 256 case clauses in a switch are not allowed.");
-				return;
 			}
 			else if (nCases > 0) {
 				int jumpHere = cases[nCases - 1];
@@ -614,7 +705,6 @@ static void switchStatement() {
 			inCase = true;
 			if (inDefault) {
 				error("Duplicate 'default'.");
-				return;
 			}
 			consume(TOKEN_COLON, "Expected ':' after 'default'.");
 			if (nCases > 0) {
@@ -627,7 +717,6 @@ static void switchStatement() {
 		else {
 			if (!inCase) {
 				error("Code outside 'case' or 'default' clauses.");
-				return;
 			}
 			statement();
 		}
@@ -642,20 +731,6 @@ static void switchStatement() {
 		}
 	}
 	emitByte(OP_POP);
-
-	/*
-	int thenJump = emitJump(OP_JUMP_IF_FALSE);
-	emitByte(OP_POP);
-	statement();
-
-	int elseJump = emitJump(OP_JUMP);
-
-	patchJump(thenJump);
-	emitByte(OP_POP);
-
-	if (match(TOKEN_ELSE)) statement();
-	patchJump(elseJump);
-	*/
 }
 
 void whileStatement() {
@@ -663,6 +738,7 @@ void whileStatement() {
 	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+	beginLoop(loopStart);
 
 	int exitJump = emitJump(OP_JUMP_IF_FALSE);
 	emitByte(OP_POP);
@@ -671,6 +747,7 @@ void whileStatement() {
 
 	patchJump(exitJump);
 	emitByte(OP_POP);
+	endLoop();
 }
 
 void synchronize() {
@@ -701,6 +778,12 @@ void synchronize() {
 void statement() {
 	if (match(TOKEN_PRINT)) {
 		printStatement();
+	}
+	else if (match(TOKEN_BREAK)) {
+		breakStatement();
+	}
+	else if (match(TOKEN_CONTINUE)) {
+		continueStatement();
 	}
 	else if (match(TOKEN_FOR)) {
 		forStatement();
