@@ -4,6 +4,6 @@
 #include "object.h"
 #include "vm.h"
 
-bool compile(const char*, Chunk*);
+ObjFunction* compile(const char*);
 
 #endif // vlox_compiler_h

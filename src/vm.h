@@ -1,15 +1,23 @@
 #ifndef vlox_vm_h
 #define vlox_vm_h
 
-#include "chunk.h"
+#include "object.h"
 #include "table.h"
 #include "value.h"
 
+#define FRAMES_MAX 64
 #define STACK_SLICE_SIZE 256
 
 typedef struct {
-	Chunk* chunk;
+	ObjFunction* function;
 	uint8_t* ip;
+	Value* slots;
+} CallFrame;
+
+typedef struct {
+	CallFrame frames[FRAMES_MAX];
+	int frameCount;
+
 	Value* stack;
 	Value* stackLimit;
 	Value* stackTop;

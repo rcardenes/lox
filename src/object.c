@@ -18,6 +18,14 @@ static Obj* allocateObject(size_t size, ObjType type) {
 	return object;
 }
 
+ObjFunction* newFunction() {
+	ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
+	function->arity = 0;
+	function->name = NULL;
+	initChunk(&function->chunk);
+	return function;
+}
+
 static ObjString* allocateString(int length, uint32_t hash, bool dynamic) {
 	ObjString* string;
 	if (dynamic) {
@@ -85,6 +93,14 @@ ObjString* copyStrings(StringList* list) {
 	return (ObjString*)string;
 }
 
+static void printFunction(ObjFunction* function) {
+	if (!function->name) {
+		printf("<script>");
+		return;
+	}
+	printf("<fn %s>", function->name->chars);
+}
+
 ObjString* takeString(char* chars, int length) {
 	uint32_t hash = hashString(chars, length);
 	ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
@@ -105,6 +121,9 @@ ObjString* takeString(char* chars, int length) {
 
 void printObject(Value value) {
 	switch(OBJ_TYPE(value)) {
+		case OBJ_FUNCTION:
+			printFunction(AS_FUNCTION(value));
+			break;
 		case OBJ_STRING:
 		case OBJ_STRING_DYNAMIC:
 			printf("%s", AS_CSTRING(value));

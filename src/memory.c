@@ -24,6 +24,11 @@ static void freeObject(Obj* object) {
 			 FREE_VARIABLE(ObjStringDynamic, string->length + 1, object);
 			 break;
 		 }
+		case OBJ_FUNCTION: {
+			ObjFunction* function = (ObjFunction*)object;
+			freeChunk(&function->chunk);
+			FREE(ObjFunction, object);
+		}
 	}
 }
 
