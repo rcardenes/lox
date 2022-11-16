@@ -15,19 +15,24 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
 
 static void freeObject(Obj* object) {
 	switch (object->type) {
-		case OBJ_STRING: {
-			 FREE(ObjString, object);
-			 break;
-		 }
-		case OBJ_STRING_DYNAMIC: {
-			 ObjString* string = (ObjString*) object;
-			 FREE_VARIABLE(ObjStringDynamic, string->length + 1, object);
-			 break;
-		 }
 		case OBJ_FUNCTION: {
 			ObjFunction* function = (ObjFunction*)object;
 			freeChunk(&function->chunk);
 			FREE(ObjFunction, object);
+			break;
+		}
+		case OBJ_NATIVE: {
+			FREE(ObjNative, object);
+			break;
+		}
+		case OBJ_STRING: {
+			FREE(ObjString, object);
+			break;
+		}
+		case OBJ_STRING_DYNAMIC: {
+			ObjString* string = (ObjString*) object;
+			FREE_VARIABLE(ObjStringDynamic, string->length + 1, object);
+			break;
 		}
 	}
 }
