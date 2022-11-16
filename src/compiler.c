@@ -173,23 +173,16 @@ static void emitReturn() {
 	emitByte(OP_RETURN);
 }
 
-static ConstIndex makeConstant(Value value) {
-	int constant = addConstant(currentChunk(), value);
-	ConstIndex result = { true, constant };
-	if (constant > UINT8_MAX) {
-		result.shortIndex = false;
-	}
-
-	return result;
+static int makeConstant(Value value) {
+	return addConstant(currentChunk(), value);
 }
 
-static void emitConstantBytes(OpCode opCode, ConstIndex constant) {
+static void emitConstantBytes(OpCode opCode, int constant) {
 	writeConstant(currentChunk(), opCode, constant, parser.previous.line);
 }
 
 static void emitConstant(Value value) {
-	ConstIndex constant = makeConstant(value);
-	emitConstantBytes(OP_CONSTANT, constant);
+	emitConstantBytes(OP_CONSTANT, makeConstant(value));
 }
 
 static void patchJump(int offset) {
@@ -257,7 +250,7 @@ static void declaration();
 static ParseRule* getRule(TokenType);
 static void parsePrecedence(Precedence);
 
-static ConstIndex identifierConstant(Token* name) {
+static int identifierConstant(Token* name) {
 	return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
@@ -266,20 +259,18 @@ static bool identifiersEqual(Token* a, Token* b) {
 	return memcmp(a->start, b->start, a->length) == 0;
 }
 
-static ConstIndex resolveLocal(Compiler* compiler, Token* name) {
-	ConstIndex ret = {true, -1};
+static int resolveLocal(Compiler* compiler, Token* name) {
 	for (int i = compiler->localCount - 1; i >= 0; i--) {
 		Local* local = &compiler->locals[i];
 		if (identifiersEqual(name, &local->name)) {
 			if (local->depth == -1) {
 				error("Can't read local variable in its own initializer.");
 			}
-			ret.index = i;
-			break;
+			return i;
 		}
 	}
 
-	return ret;
+	return -1;
 }
 
 static void addLocal(Token name) {
@@ -310,13 +301,12 @@ static void declareVariable() {
 	addLocal(*name);
 }
 
-static ConstIndex parseVariable(const char* errorMessage) {
+static int parseVariable(const char* errorMessage) {
 	consume(TOKEN_IDENTIFIER, errorMessage);
 
 	declareVariable();
 	if (current->scopeDepth > 0) {
-		ConstIndex idx = {0, true};
-		return idx;
+		return 0;
 	}
 
 	return identifierConstant(&parser.previous);
@@ -327,7 +317,7 @@ static void markInitialized() {
 	current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
-static void defineVariable(ConstIndex global) {
+static void defineVariable(int global) {
 	if (current->scopeDepth > 0) {
 		markInitialized();
 		return;
@@ -423,8 +413,8 @@ static void string(bool) {
 
 static void namedVariable(Token name, bool canAssign) {
 	uint8_t getOp, setOp;
-	ConstIndex arg = resolveLocal(current, &name);
-	if (arg.index != -1) {
+	int arg = resolveLocal(current, &name);
+	if (arg != -1) {
 		getOp = OP_GET_LOCAL;
 		setOp = OP_SET_LOCAL;
 	}
@@ -555,7 +545,7 @@ static void function(FunctionType type) {
 			if (current->function->arity > 255) {
 				errorAtCurrent("Can't have more than 255 parameters.");
 			}
-			ConstIndex constant = parseVariable("Expect parameter name.");
+			int constant = parseVariable("Expect parameter name.");
 			defineVariable(constant);
 		} while (match(TOKEN_COMMA));
 	}
@@ -568,14 +558,14 @@ static void function(FunctionType type) {
 }
 
 static void funDeclaration() {
-	ConstIndex global = parseVariable("Expect function name.");
+	int global = parseVariable("Expect function name.");
 	markInitialized();
 	function(TYPE_FUNCTION);
 	defineVariable(global);
 }
 
 static void varDeclaration() {
-	ConstIndex global = parseVariable("Expect variable name.");
+	int global = parseVariable("Expect variable name.");
 
 	if (match(TOKEN_EQUAL)) {
 		expression();
