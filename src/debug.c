@@ -28,18 +28,19 @@ static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset)
 	return offset + 3;
 }
 
-static int constantInstruction(const char* name, Chunk* chunk, int offset, bool isLong) {
+static int constantInstruction(const char* name, Chunk* chunk, int offset) {
 	uint32_t constant = chunk->code[offset+1];
 
-	if (isLong) {
-		constant |= ((uint32_t)chunk->code[offset+2]) << 8;
-		constant |= ((uint32_t)chunk->code[offset+3]) << 16;
+	if (constant > 127 ) {
+		constant = (constant & 0x7F) << 16
+			 | ((uint32_t)chunk->code[offset+2]) << 8
+			 | ((uint32_t)chunk->code[offset+3]);
 	}
 
 	printf("%-16s %9d '", name, constant);
 	printValue(chunk->constants.values[constant]);
 	printf("'\n");
-	return offset + (!isLong ? 2 : 4);
+	return offset + (constant < 128 ? 2 : 4);
 }
 
 int disassembleInstruction(Chunk* chunk, int offset) {
@@ -56,9 +57,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 
 	switch (instruction) {
 		case OP_CONSTANT:
-			return constantInstruction("OP_CONSTANT", chunk, offset, false);
-		case OP_CONSTANT_LONG:
-			return constantInstruction("OP_CONSTANT_LONG", chunk, offset, true);
+			return constantInstruction("OP_CONSTANT", chunk, offset);
 		case OP_NIL:
 			return simpleInstruction("OP_NIL", offset);
 		case OP_TRUE:
@@ -72,17 +71,11 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 		case OP_SET_LOCAL:
 			return byteInstruction("OP_SET_LOCAL", chunk, offset);
 		case OP_GET_GLOBAL:
-			return constantInstruction("OP_GET_GLOBAL", chunk, offset, false);
-		case OP_GET_GLOBAL_LONG:
-			return constantInstruction("OP_GET_GLOBAL_LONG", chunk, offset, true);
+			return constantInstruction("OP_GET_GLOBAL", chunk, offset);
 		case OP_DEFINE_GLOBAL:
-			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset, false);
-		case OP_DEFINE_GLOBAL_LONG:
-			return constantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset, true);
+			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
 		case OP_SET_GLOBAL:
-			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset, false);
-		case OP_SET_GLOBAL_LONG:
-			return constantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset, true);
+			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
 		case OP_EQUAL_NO_POP:
 			return simpleInstruction("OP_EQUAL_NO_POP", offset);
 		case OP_EQUAL:

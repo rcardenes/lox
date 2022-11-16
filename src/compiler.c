@@ -183,20 +183,13 @@ static ConstIndex makeConstant(Value value) {
 	return result;
 }
 
-static void emitConstantBytes(OpCode opShort, OpCode opLong, ConstIndex constant) {
-	if (constant.shortIndex) {
-		emitBytes(opShort, (uint8_t)constant.index);
-	}
-	else {
-		emitBytes(opLong, (uint8_t)(constant.index && 0xFF));
-		emitBytes((uint8_t)((constant.index && 0xFF00) >> 8),
-			  (uint8_t)((constant.index && 0xFF0000) >> 16));
-	}
+static void emitConstantBytes(OpCode opCode, ConstIndex constant) {
+	writeConstant(currentChunk(), opCode, constant, parser.previous.line);
 }
 
 static void emitConstant(Value value) {
 	ConstIndex constant = makeConstant(value);
-	emitConstantBytes(OP_CONSTANT, OP_CONSTANT_LONG, constant);
+	emitConstantBytes(OP_CONSTANT, constant);
 }
 
 static void patchJump(int offset) {
@@ -340,7 +333,7 @@ static void defineVariable(ConstIndex global) {
 		return;
 	}
 
-	emitConstantBytes(OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, global);
+	emitConstantBytes(OP_DEFINE_GLOBAL, global);
 }
 
 static uint8_t argumentList() {
@@ -441,14 +434,12 @@ static void namedVariable(Token name, bool canAssign) {
 		setOp = OP_SET_GLOBAL;
 	}
 
-	// Local variables cannot have long indices, so we don't really
-	// worry about the second argument for emitConstantBytes
 	if (canAssign && match(TOKEN_EQUAL)) {
 		expression();
-		emitConstantBytes(setOp, OP_SET_GLOBAL_LONG, arg);
+		emitConstantBytes(setOp, arg);
 	}
 	else {
-		emitConstantBytes(getOp, OP_GET_GLOBAL_LONG, arg);
+		emitConstantBytes(getOp, arg);
 	}
 }
 

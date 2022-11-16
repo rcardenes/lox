@@ -102,6 +102,17 @@ inline int read_24bit_int() {
 	return res | ((*frame->ip++) << 16);
 }
 
+static Value readConstant() {
+	CallFrame* frame = &vm.frames[vm.frameCount - 1];
+	int index = *(frame->ip++);
+	if (index > 127) {
+		index = (index & 0x7F) << 16;
+		index |= (*frame->ip++) << 8;
+		index |= (*frame->ip++);
+	}
+	return frame->function->chunk.constants.values[index];
+}
+
 static
 inline Value peek(int distance) {
 	return vm.stackTop[-1 - distance];
@@ -171,11 +182,9 @@ static InterpretResult run() {
 
 
 #define READ_BYTE() (*frame->ip++)
-#define READ_24BIT_INT() (read_24bit_int())
-#define READ_CONSTANT(isShort) (frame->function->chunk.constants.values[(isShort) ? READ_BYTE(): READ_24BIT_INT()])
 #define READ_SHORT() \
 	(frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
-#define READ_STRING(isShort) AS_STRING(READ_CONSTANT(isShort))
+#define READ_STRING() AS_STRING(readConstant())
 #define BINARY_OP(retType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -207,9 +216,8 @@ static InterpretResult run() {
 		uint8_t instruction = READ_BYTE();
 
 		switch (instruction) {
-			case OP_CONSTANT_LONG:
 			case OP_CONSTANT: {
-					Value constant = READ_CONSTANT(instruction == OP_CONSTANT);
+					Value constant = readConstant();
 					push(constant);
 					break;
 				}
@@ -222,9 +230,8 @@ static InterpretResult run() {
 				push(frame->slots[slot]);
 				break;
 			}
-			case OP_GET_GLOBAL_LONG:
 			case OP_GET_GLOBAL: {
-				ObjString* name = READ_STRING(instruction == OP_GET_GLOBAL);
+				ObjString* name = READ_STRING();
 				Value value;
 				if (!tableGet(&vm.globals, name, &value)) {
 					runtimeError("Undefined variable '%s'.", name->chars);
@@ -233,9 +240,8 @@ static InterpretResult run() {
 				push(value);
 				break;
 			}
-			case OP_DEFINE_GLOBAL_LONG:
 			case OP_DEFINE_GLOBAL: {
-				ObjString* name = READ_STRING(instruction == OP_DEFINE_GLOBAL);
+				ObjString* name = READ_STRING();
 				tableSet(&vm.globals, name, peek(0));
 				pop();
 				break;
@@ -245,9 +251,8 @@ static InterpretResult run() {
 				frame->slots[slot] = peek(0);
 				break;
 			}
-			case OP_SET_GLOBAL_LONG:
 			case OP_SET_GLOBAL: {
-				ObjString* name = READ_STRING(instruction == OP_SET_GLOBAL);
+				ObjString* name = READ_STRING();
 				if (tableSet(&vm.globals, name, peek(0))) {
 					tableDelete(&vm.globals, name);
 					runtimeError("Undefined variable '%s'.", name->chars);
@@ -345,8 +350,6 @@ static InterpretResult run() {
 
 #undef READ_BYTE
 #undef READ_SHORT
-#undef READ_24BIT_INT
-#undef READ_CONSTANT
 #undef READ_STRING
 #undef READ_LONG_CONSTANT
 #undef BINARY_OP

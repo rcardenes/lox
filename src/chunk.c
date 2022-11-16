@@ -65,19 +65,19 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 	}
 }
 
-void writeConstant(Chunk* chunk, Value value, int line) {
-	int index = addConstant(chunk, value);
+void writeConstant(Chunk* chunk, OpCode opCode, ConstIndex constant, int line) {
+	int index = constant.index;
 
-	if (index < 256) {
-		writeChunk(chunk, OP_CONSTANT, -1);
+	writeChunk(chunk, opCode, -1);
+	if (constant.shortIndex) {
 		writeChunk(chunk, index, -1);
 		addLine(chunk, line, 2);
 	}
 	else {
-		writeChunk(chunk, OP_CONSTANT_LONG, -1);
-		writeChunk(chunk, (index & 0xFF), -1);
-		writeChunk(chunk, (index & 0xFF00) >> 8, -1);
+		index |= 0x800000;
 		writeChunk(chunk, (index & 0xFF0000) >> 16, -1);
+		writeChunk(chunk, (index & 0xFF00) >> 8, -1);
+		writeChunk(chunk, (index & 0xFF), -1);
 		addLine(chunk, line, 4);
 	}
 }
