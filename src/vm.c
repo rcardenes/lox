@@ -59,6 +59,13 @@ void initVM() {
 	vm.stackLimit = vm.stack + STACK_SLICE_SIZE;
 	resetStack();
 	vm.objects = NULL;
+	vm.bytesAllocated = 0;
+	vm.nextGC = 1024 * 1024;
+
+	vm.grayCount = 0;
+	vm.grayCapacity = 0;
+	vm.grayStack = NULL;
+
 	initTable(&vm.globals);
 	initTable(&vm.strings);
 
@@ -206,9 +213,10 @@ static void concatenate() {
 	StringList sl;
 
 	initStringList(&sl);
-	addStringToList(&sl, AS_STRING(pop()));
-	prependStringToList(&sl, AS_STRING(peek(0)));
+	addStringToList(&sl, AS_STRING(peek(0)));
+	prependStringToList(&sl, AS_STRING(peek(1)));
 	ObjString* result= copyStrings(&sl);
+	pop();
 	replace(OBJ_VAL(result));
 	resetStringList(&sl);
 }

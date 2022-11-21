@@ -21,6 +21,9 @@
 #define FREE(type, pointer) reallocate(pointer, sizeof(type), 0);
 
 void* reallocate(void*, size_t, size_t);
+void markObject(Obj*);
+void markValue(Value);
+void collectGarbage();
 void freeObjects();
 
 #endif // vlox_memory_h

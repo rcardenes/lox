@@ -5,5 +5,6 @@
 #include "vm.h"
 
 ObjFunction* compile(const char*);
+void markCompilerRoots();
 
 #endif // vlox_compiler_h
