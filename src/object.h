@@ -7,21 +7,25 @@
 
 #define OBJ_TYPE(value)		(AS_OBJ(value)->type)
 
+#define IS_CLOSURE(value)	isObjType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value)	isObjType(value, OBJ_FUNCTION)
 #define IS_NATIVE(value)	isObjType(value, OBJ_NATIVE)
 #define IS_STRING(value)	(isObjType(value, OBJ_STRING_DYNAMIC) || \
 				 isObjType(value, OBJ_STRING))
 
+#define AS_CLOSURE(value)	((ObjClosure*)AS_OBJ(value))
 #define AS_FUNCTION(value)	((ObjFunction*)AS_OBJ(value))
 #define AS_NATIVE(value)	(((ObjNative*)AS_OBJ(value))->function)
 #define AS_STRING(value)	((ObjString*)AS_OBJ(value))
 #define AS_CSTRING(value)	(((ObjString*)AS_OBJ(value))->chars)
 
 typedef enum {
+	OBJ_CLOSURE,
 	OBJ_FUNCTION,
 	OBJ_NATIVE,
 	OBJ_STRING,
-	OBJ_STRING_DYNAMIC
+	OBJ_STRING_DYNAMIC,
+	OBJ_UPVALUE
 } ObjType;
 
 struct Obj {
@@ -33,6 +37,7 @@ typedef struct {
 	Obj obj;
 	int arity;
 	Chunk chunk;
+	int upvalueCount;
 	ObjString* name;
 } ObjFunction;
 
@@ -55,6 +60,13 @@ typedef struct ObjStringDynamic {
 	char buffer[];
 } ObjStringDynamic;
 
+typedef struct ObjUpvalue {
+	Obj obj;
+	Value* location;
+	Value closed;
+	struct ObjUpvalue* next;
+} ObjUpvalue;
+
 typedef struct StringListNode {
 	ObjString* string;
 	struct StringListNode* next;
@@ -66,11 +78,20 @@ typedef struct StringList {
 	StringListNode* last;
 } StringList;
 
+typedef struct {
+	Obj obj;
+	ObjFunction* function;
+	ObjUpvalue** upvalues;
+	int upvalueCount;
+} ObjClosure;
+
+ObjClosure* newClosure(ObjFunction*);
 ObjFunction* newFunction();
 ObjNative* newNative(NativeFn);
 ObjString* takeString(char*, int);
 ObjString* copyStrings(StringList*);
 ObjString* copyString(const char*, int);
+ObjUpvalue* newUpvalue(Value*);
 void printObject(Value);
 void initStringList(StringList*);
 void addStringToList(StringList*, ObjString*);
