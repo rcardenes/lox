@@ -16,6 +16,35 @@ static Value clockNative(int argCount, Value* args) {
 	return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
+static Value toStringNative(int argCount, Value* args) {
+	if (argCount != 1) {
+		return NIL_VAL;
+	}
+
+	if (IS_BOOL(args[0])) {
+		if (AS_BOOL(args[0]))
+			return OBJ_VAL(copyString("true", 4));
+		else
+			return OBJ_VAL(copyString("false", 5));
+	}
+	else if (IS_NUMBER(args[0])) {
+		char str[128] = "foobar";
+		double d = AS_NUMBER(args[0]);
+		int i = (int)d;
+
+		if (d == i) {
+			snprintf(str, 128, "%d", i);
+		}
+		else {
+			snprintf(str, 128, "%g", d);
+		}
+		return OBJ_VAL(copyString(str, strlen(str)));
+	}
+	else {
+			return NIL_VAL;
+	}
+}
+
 static void resetStack() {
 	vm.stackTop = vm.stack;
 	vm.frameCount = 0;
@@ -73,6 +102,7 @@ void initVM() {
 	vm.initString = copyString("init", 4);
 
 	defineNative("clock", clockNative);
+	defineNative("toString", toStringNative);
 }
 
 void freeVM() {
@@ -419,6 +449,15 @@ static InterpretResult run() {
 				push(value);
 				break;
 			}
+			case OP_GET_SUPER: {
+				ObjString* name = READ_STRING();
+				ObjClass* superclass = AS_CLASS(pop());
+
+				if (!bindMethod(superclass, name)) {
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
+			}
 			case OP_EQUAL_NO_POP: {
 				       Value b = peek(0);
 				       Value a = peek(-1);
@@ -500,6 +539,16 @@ static InterpretResult run() {
 				frame = &vm.frames[vm.frameCount - 1];
 				break;
 			}
+			case OP_SUPER_INVOKE: {
+				ObjString* method = READ_STRING();
+				int argCount = READ_BYTE();
+				ObjClass* superclass = AS_CLASS(pop());
+				if (!invokeFromClass(superclass, method, argCount)) {
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				frame = &vm.frames[vm.frameCount - 1];
+				break;
+			}
 			case OP_CLOSURE: {
 				ObjFunction* function = AS_FUNCTION(readConstant());
 				ObjClosure* closure = newClosure(function);
@@ -537,6 +586,19 @@ static InterpretResult run() {
 			case OP_CLASS:
 				push(OBJ_VAL(newClass(READ_STRING())));
 				break;
+			case OP_INHERIT: {
+				Value superclass = peek(1);
+
+				if (!IS_CLASS(superclass)) {
+					runtimeError("Superclass must be a class.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				ObjClass* subclass = AS_CLASS(peek(0));
+				tableAddAll(&AS_CLASS(superclass)->methods,
+					    &subclass->methods);
+				pop(); // Subclass.
+				break;
+			}
 			case OP_METHOD:
 				defineMethod(READ_STRING());
 				break;

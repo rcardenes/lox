@@ -108,6 +108,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 			return constantInstruction("OP_GET_PROPERTY", chunk, offset);
 		case OP_SET_PROPERTY:
 			return constantInstruction("OP_SET_PROPERTY", chunk, offset);
+		case OP_GET_SUPER:
+			return constantInstruction("OP_GET_SUPER", chunk, offset);
 		case OP_EQUAL_NO_POP:
 			return simpleInstruction("OP_EQUAL_NO_POP", offset);
 		case OP_EQUAL:
@@ -138,6 +140,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 			return byteInstruction("OP_CALL", chunk, offset);
 		case OP_INVOKE:
 			return invokeInstruction("OP_INVOKE", chunk, offset);
+		case OP_SUPER_INVOKE:
+			return invokeInstruction("OP_SUPER_INVOKE", chunk, offset);
 		case OP_CLOSURE: {
 			uint32_t constant;
 
@@ -151,7 +155,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 			for (int j = 0; j < function->upvalueCount; j++) {
 				int isLocal = chunk->code[offset++];
 				int index = chunk->code[offset++];
-				printf("%04d      |%23s %d\n",
+				printf("%04d    | %39s %d\n",
 						offset - 2, isLocal ? "local" : "upvalue", index);
 			}
 			return offset;
@@ -172,6 +176,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 			printf("'\n");
 			return offset;
 		}
+		case OP_INHERIT:
+			return simpleInstruction("OP_INHERIT", offset);
 		case OP_METHOD: {
 			uint32_t constant;
 
