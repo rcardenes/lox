@@ -66,9 +66,16 @@ static void blackenObject(Obj* object) {
 	printf("\n");
 #endif
 	switch (object->type) {
+		case OBJ_BOUND_METHOD: {
+			ObjBoundMethod* bound = (ObjBoundMethod*)object;
+			markValue(bound->receiver);
+			markObject((Obj*)bound->method);
+			break;
+		}
 		case OBJ_CLASS: {
 			ObjClass* klass = (ObjClass*)object;
 			markObject((Obj*)klass->name);
+			markTable(&klass->methods);
 			break;
 		}
 		case OBJ_CLOSURE: {
@@ -107,7 +114,12 @@ static void freeObject(Obj* object) {
 #endif
 
 	switch (object->type) {
+		case OBJ_BOUND_METHOD:
+			FREE(ObjBoundMethod, object);
+			break;
 		case OBJ_CLASS: {
+			ObjClass* klass = (ObjClass*)object;
+			freeTable(&klass->methods);
 			FREE(ObjClass, object);
 			break;
 		}
@@ -129,23 +141,20 @@ static void freeObject(Obj* object) {
 			FREE(ObjInstance, instance);
 			break;
 		}
-		case OBJ_NATIVE: {
+		case OBJ_NATIVE:
 			FREE(ObjNative, object);
 			break;
-		}
-		case OBJ_STRING: {
+		case OBJ_STRING:
 			FREE(ObjString, object);
 			break;
-		}
 		case OBJ_STRING_DYNAMIC: {
 			ObjString* string = (ObjString*) object;
 			FREE_VARIABLE(ObjStringDynamic, string->length + 1, object);
 			break;
 		}
-		case OBJ_UPVALUE: {
+		case OBJ_UPVALUE:
 			FREE(ObjUpvalue, object);
 			break;
-		}
 	}
 }
 
@@ -176,6 +185,7 @@ static void markRoots() {
 
 	markTable(&vm.globals);
 	markCompilerRoots();
+	markObject((Obj*)vm.initString);
 }
 
 static void traceReferences() {
