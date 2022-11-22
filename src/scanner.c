@@ -78,6 +78,7 @@ static void skipWhitespace() {
 			case '\r':
 			case '\n':
 				scanner.line++;
+			case '\t':
 			case ' ':
 				advance();
 				break;
