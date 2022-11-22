@@ -558,17 +558,12 @@ static void super_(bool) {
 	uint32_t name = identifierConstant(&parser.previous);
 
 	namedVariable(syntheticToken("this"), false);
-#ifdef OPTIMIZED_SUPER_CALL
 	if (match(TOKEN_LEFT_PAREN)) {
 		uint8_t argCount = argumentList();
 		namedVariable(syntheticToken("super"), false);
 		emitBytes(OP_SUPER_INVOKE, name);
 		emitByte(argCount);
 	}
-#else
-	namedVariable(syntheticToken("super"), false);
-	emitBytes(OP_GET_SUPER, name);
-#endif
 }
 
 static void this_(bool) {

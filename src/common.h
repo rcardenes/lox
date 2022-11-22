@@ -11,8 +11,6 @@
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 
-#define OPTIMIZED_SUPER_CALL
-
 #define UINT8_COUNT (UINT8_MAX + 1)
 
 #endif // vlox_common_h
