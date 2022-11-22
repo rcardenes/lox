@@ -99,6 +99,7 @@ typedef struct {
 typedef struct {
 	Obj obj;
 	ObjString *name;
+	ObjClosure* initializer;
 	Table methods;
 } ObjClass;
 
