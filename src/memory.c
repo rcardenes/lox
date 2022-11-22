@@ -119,6 +119,7 @@ static void freeObject(Obj* object) {
 			break;
 		case OBJ_CLASS: {
 			ObjClass* klass = (ObjClass*)object;
+			klass->initializer = NULL;
 			freeTable(&klass->methods);
 			FREE(ObjClass, object);
 			break;

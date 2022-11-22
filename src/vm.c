@@ -191,12 +191,11 @@ static bool callValue(Value callee, int argCount) {
 			case OBJ_CLASS: {
 				ObjClass* klass = AS_CLASS(callee);
 				vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
-				Value initializer;
-				if (tableGet(&klass->methods, vm.initString, &initializer)) {
-					return call(AS_CLOSURE(initializer), argCount);
+				if (klass->initializer != NULL) {
+					return call(klass->initializer, argCount);
 				}
 				else if (argCount != 0) {
-					runtimeError("Expected 0 arguments but gout %d.", argCount);
+					runtimeError("Expected 0 arguments but got %d.", argCount);
 					return false;
 				}
 				return true;
@@ -296,6 +295,12 @@ static void closeUpvalues(Value* last) {
 static void defineMethod(ObjString* name) {
 	Value method = peek(0);
 	ObjClass* klass = AS_CLASS(peek(1));
+	{
+		ObjClosure* closure = AS_CLOSURE(method);
+		if (memcmp(closure->function->name->chars, "init", 4) == 0) {
+			klass->initializer = closure;
+		}
+	}
 	tableSet(&klass->methods, name, method);
 	pop();
 }
