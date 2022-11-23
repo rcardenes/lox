@@ -21,6 +21,7 @@ typedef struct {
 typedef enum {
 	PREC_NONE,
 	PREC_ASSIGNMENT,
+	PREC_TERNARY,
 	PREC_OR,
 	PREC_AND,
 	PREC_EQUALITY,
@@ -590,6 +591,20 @@ static void unary(bool) {
 	}
 }
 
+static void ternary(bool) {
+	int midJump = emitJump(OP_JUMP_IF_FALSE);
+
+	emitByte(OP_POP);
+	parsePrecedence(PREC_TERNARY - 1);
+	int exitJump = emitJump(OP_JUMP);
+
+	consume(TOKEN_COLON, "Expect ':' after first ternary expression.");
+
+	patchJump(midJump);
+	parsePrecedence(PREC_TERNARY - 1);
+	patchJump(exitJump);
+}
+
 static ParseRule rules[] = {
 	[TOKEN_LEFT_PAREN]	= {grouping,	call,	PREC_CALL},
 	[TOKEN_RIGHT_PAREN]	= {NULL,	NULL,	PREC_NONE},
@@ -623,6 +638,7 @@ static ParseRule rules[] = {
 	[TOKEN_NIL]		= {literal,	NULL,	PREC_NONE},
 	[TOKEN_OR]		= {NULL,	or_,	PREC_OR},
 	[TOKEN_PRINT]		= {NULL,	NULL,	PREC_NONE},
+	[TOKEN_QUESTION_MARK]	= {NULL,	ternary,PREC_TERNARY},
 	[TOKEN_RETURN]		= {NULL,	NULL,	PREC_NONE},
 	[TOKEN_SWITCH]		= {NULL,	NULL,	PREC_NONE},
 	[TOKEN_SUPER]		= {super_,	NULL,	PREC_NONE},
