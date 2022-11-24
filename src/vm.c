@@ -390,9 +390,13 @@ static InterpretResult run() {
 				push(value);
 				break;
 			}
+			case OP_DEFINE_IGLOBAL:
 			case OP_DEFINE_GLOBAL: {
 				ObjString* name = READ_STRING();
 				tableSet(&vm.globals, name, peek(0));
+				if (instruction == OP_DEFINE_IGLOBAL) {
+					tableSetProperties(&vm.globals, name, TABLE_IMMUTABLE);
+				}
 				pop();
 				break;
 			}
@@ -403,11 +407,16 @@ static InterpretResult run() {
 			}
 			case OP_SET_GLOBAL: {
 				ObjString* name = READ_STRING();
-				if (tableSet(&vm.globals, name, peek(0))) {
-					tableDelete(&vm.globals, name);
+				uint8_t properties;
+				if (!tableGetProperties(&vm.globals, name, &properties)) {
 					runtimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
+				else if (properties & TABLE_IMMUTABLE) {
+					runtimeError("Unable to assign a value to immutable '%s'.", name->chars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				tableSet(&vm.globals, name, peek(0));
 				break;
 			}
 			case OP_GET_UPVALUE: {

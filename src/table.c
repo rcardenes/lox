@@ -54,6 +54,16 @@ bool tableGet(Table* table, ObjString* key, Value* value) {
 	return true;
 }
 
+bool tableGetProperties(Table* table, ObjString* key, uint8_t* properties) {
+	if ((table->count == 0) || (!properties)) return false;
+
+	Entry* entry = findEntry(table->entries, table->capacity, key);
+	if (entry->key == NULL) return false;
+
+	*properties = entry->properties;
+	return true;
+}
+
 static void adjustCapacity(Table* table, int capacity) {
 	Entry* entries = ALLOCATE(Entry, capacity);
 	Entry* current = entries;
@@ -85,11 +95,34 @@ bool tableSet(Table* table, ObjString* key, Value value) {
 
 	Entry* entry = findEntry(table->entries, table->capacity, key);
 	bool isNewKey = entry->key == NULL;
-	if (isNewKey && IS_NIL(entry->value)) table->count ++;
+	if (isNewKey) {
+		if (IS_NIL(entry->value)) table->count ++;
+		entry->properties = 0;
+	}
 
 	entry->key = key;
 	entry->value = value;
 	return isNewKey;
+}
+
+bool tableSetProperties(Table* table, ObjString* key, uint8_t properties) {
+	if ((table->count == 0) || (!properties)) return false;
+
+	Entry* entry = findEntry(table->entries, table->capacity, key);
+	if (entry->key == NULL) return false;
+
+	entry->properties |= properties;
+	return true;
+}
+
+bool tableUnsetProperties(Table* table, ObjString* key, uint8_t properties) {
+	if ((table->count == 0) || (!properties)) return false;
+
+	Entry* entry = findEntry(table->entries, table->capacity, key);
+	if (entry->key == NULL) return false;
+
+	entry->properties &= ~properties;
+	return true;
 }
 
 bool tableDelete(Table* table, ObjString* key) {

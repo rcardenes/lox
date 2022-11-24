@@ -1,6 +1,5 @@
 Urgent: debug getLine in chunk.c
 Pending: Challenge 20.1 (page 380)
-Pending: Challenge 22.3 (page 412)
 Pending: Challenges 24.1-4 (page 462)
 Pending: Challenge 25.1 (page 493)
 Pending: Challenges 26.* (page 524)

@@ -150,7 +150,14 @@ static TokenType identifierType() {
 				  }
 			  }
 			  break;
-		case 'v': return checkKeyword(1, 2, "ar", TOKEN_VAR);
+		case 'v':
+			  if ((scanner.current - scanner.start == 3) && (scanner.start[1] == 'a')) {
+				  switch (scanner.start[2]) {
+					  case 'l': return TOKEN_VAL;
+					  case 'r': return TOKEN_VAR;
+				  }
+			  }
+			  break;
 		case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
 	}
 

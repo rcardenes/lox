@@ -18,14 +18,14 @@ static int simpleInstruction(const char* name, int offset) {
 
 static int byteInstruction(const char* name, Chunk* chunk, int offset) {
 	uint8_t slot = chunk->code[offset + 1];
-	printf("%-16s %18d\n", name, slot);
+	printf("%-17s %18d\n", name, slot);
 	return offset + 2;
 }
 
 static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset) {
 	uint16_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
 	jump |= chunk->code[offset + 2];
-	printf("%-16s %18d -> %d\n", name, offset, offset + 3 + sign * jump);
+	printf("%-17s %18d -> %d\n", name, offset, offset + 3 + sign * jump);
 	return offset + 3;
 }
 
@@ -49,7 +49,7 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
 
 	offset = decodeConstantIndex(chunk, offset, &constant);
 
-	printf("%-16s %18d '", name, constant);
+	printf("%-17s %18d '", name, constant);
 	printValue(chunk->constants.values[constant]);
 	printf("'\n");
 
@@ -61,7 +61,7 @@ static int invokeInstruction(const char* name, Chunk* chunk, int offset) {
 
 	offset = decodeConstantIndex(chunk, offset, &constant);
 	uint8_t argCount = chunk->code[offset];
-	printf("%-16s (%d args) %9d '", name, argCount, constant);
+	printf("%-17s (%d args) %9d '", name, argCount, constant);
 	printValue(chunk->constants.values[constant]);
 	printf("'\n");
 	return offset + 1;
@@ -98,6 +98,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 			return constantInstruction("OP_GET_GLOBAL", chunk, offset);
 		case OP_DEFINE_GLOBAL:
 			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
+		case OP_DEFINE_IGLOBAL:
+			return constantInstruction("OP_DEFINE_IGLOBAL", chunk, offset);
 		case OP_SET_GLOBAL:
 			return constantInstruction("OP_SET_GLOBAL", chunk, offset);
 		case OP_GET_UPVALUE:
@@ -147,7 +149,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 
 			offset = decodeConstantIndex(chunk, offset, &constant);
 
-			printf("OP_CLOSURE       %18d '", constant);
+			printf("%-17s %18d '", "OP_CLOSURE", constant);
 			printValue(chunk->constants.values[constant]);
 			printf("'\n");
 
@@ -155,7 +157,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 			for (int j = 0; j < function->upvalueCount; j++) {
 				int isLocal = chunk->code[offset++];
 				int index = chunk->code[offset++];
-				printf("%04d    | %39s %d\n",
+				printf("%04d    | %40s %d\n",
 						offset - 2, isLocal ? "local" : "upvalue", index);
 			}
 			return offset;
@@ -171,7 +173,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 
 			offset = decodeConstantIndex(chunk, offset, &constant);
 
-			printf("OP_CLASS         %18d '", constant);
+			printf("%-17s %18d '", "OP_CLASS", constant);
 			printValue(chunk->constants.values[constant]);
 			printf("'\n");
 			return offset;
@@ -183,7 +185,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 
 			offset = decodeConstantIndex(chunk, offset, &constant);
 
-			printf("OP_METHOD        %18d '", constant);
+			printf("%-17s %18d '", "OP_METHOD", constant);
 			printValue(chunk->constants.values[constant]);
 			printf("'\n");
 			return offset;
