@@ -10,14 +10,16 @@
 #include "memory.h"
 #include "vm.h"
 
-static Value clockNative(int, Value*);
-static Value toStringNative(int, Value*);
+static void runtimeError(const char*, ...);
 
 typedef struct {
 	const char* name;
 	int arity;
 	NativeFn func;
 } NativeDef;
+
+static NativeReturn clockNative(int, Value*);
+static NativeReturn toStringNative(int, Value*);
 
 NativeDef nativeFunctions[] = {
 	{ "clock", 0, clockNative },
@@ -27,20 +29,19 @@ NativeDef nativeFunctions[] = {
 
 VM vm;
 
-static Value clockNative(int argCount, Value* args) {
-	return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+NativeReturn clockNative(int argCount, Value* args) {
+	NativeReturn result = {INTERPRET_OK, NUMBER_VAL((double)clock() / CLOCKS_PER_SEC)};
+	return result;
 }
 
-static Value toStringNative(int argCount, Value* args) {
-	if (argCount != 1) {
-		return NIL_VAL;
-	}
+NativeReturn toStringNative(int argCount, Value* args) {
+	NativeReturn result = {INTERPRET_OK, NIL_VAL};
 
 	if (IS_BOOL(args[0])) {
 		if (AS_BOOL(args[0]))
-			return OBJ_VAL(copyString("true", 4));
+			result.value = OBJ_VAL(takeString("true", 4));
 		else
-			return OBJ_VAL(copyString("false", 5));
+			result.value = OBJ_VAL(takeString("false", 5));
 	}
 	else if (IS_NUMBER(args[0])) {
 		char str[128] = "foobar";
@@ -53,11 +54,17 @@ static Value toStringNative(int argCount, Value* args) {
 		else {
 			snprintf(str, 128, "%g", d);
 		}
-		return OBJ_VAL(copyString(str, strlen(str)));
+		result.value = OBJ_VAL(copyString(str, strlen(str)));
+	}
+	else if (IS_NIL(args[0])) {
+		result.value = OBJ_VAL(takeString("nil", 3));
 	}
 	else {
-			return NIL_VAL;
+		runtimeError("toString accepts only numbers or booleans.");
+		result.status = NATIVE_RUNTIME_ERROR;
 	}
+
+	return result;
 }
 
 static void resetStack() {
@@ -66,7 +73,7 @@ static void resetStack() {
 	vm.openUpvalues = NULL;
 }
 
-static void runtimeError(const char* format, ...) {
+void runtimeError(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
 	vfprintf(stderr, format, args);
@@ -225,9 +232,12 @@ static bool callValue(Value callee, int argCount) {
 					runtimeError("Expected %d arguments but got %d.", native->arity, argCount);
 					return false;
 				}
-				Value result = native->function(argCount, vm.stackTop - argCount);
+				NativeReturn result = native->function(argCount, vm.stackTop - argCount);
+				if (result.status != NATIVE_OK) {
+					return false;
+				}
 				vm.stackTop -= argCount + 1;
-				push(result);
+				push(result.value);
 				return true;
 			}
 			default:

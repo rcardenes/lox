@@ -52,7 +52,17 @@ typedef struct {
 	ObjString* name;
 } ObjFunction;
 
-typedef Value (*NativeFn)(int, Value*);
+typedef enum {
+	NATIVE_OK,
+	NATIVE_RUNTIME_ERROR
+} NativeResult;
+
+typedef struct {
+	NativeResult status;
+	Value value;
+} NativeReturn;
+
+typedef NativeReturn (*NativeFn)(int, Value*);
 
 typedef struct {
 	Obj obj;
