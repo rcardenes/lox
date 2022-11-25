@@ -10,6 +10,21 @@
 #include "memory.h"
 #include "vm.h"
 
+static Value clockNative(int, Value*);
+static Value toStringNative(int, Value*);
+
+typedef struct {
+	const char* name;
+	int arity;
+	NativeFn func;
+} NativeDef;
+
+NativeDef nativeFunctions[] = {
+	{ "clock", 0, clockNative },
+	{ "toString", 1, toStringNative },
+	{ NULL, -1, NULL }
+};
+
 VM vm;
 
 static Value clockNative(int argCount, Value* args) {
@@ -75,9 +90,9 @@ static void runtimeError(const char* format, ...) {
 	resetStack();
 }
 
-static void defineNative(const char* name, NativeFn function) {
-	push(OBJ_VAL(copyString(name, (int)strlen(name))));
-	push(OBJ_VAL(newNative(function)));
+static void defineNative(NativeDef* definition) {
+	push(OBJ_VAL(copyString(definition->name, (int)strlen(definition->name))));
+	push(OBJ_VAL(newNative(definition->func, definition->arity)));
 	tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
 	pop();
 	pop();
@@ -101,8 +116,10 @@ void initVM() {
 	vm.initString = NULL;
 	vm.initString = copyString("init", 4);
 
-	defineNative("clock", clockNative);
-	defineNative("toString", toStringNative);
+	NativeDef* current = &nativeFunctions[0];
+	while (current->name != NULL) {
+		defineNative(current++);
+	}
 }
 
 void freeVM() {
@@ -203,8 +220,12 @@ static bool callValue(Value callee, int argCount) {
 			case OBJ_CLOSURE:
 				return call(AS_CLOSURE(callee), argCount);
 			case OBJ_NATIVE: {
-				NativeFn native = AS_NATIVE(callee);
-				Value result = native(argCount, vm.stackTop - argCount);
+				ObjNative* native = AS_NATIVE(callee);
+				if (argCount != native->arity) {
+					runtimeError("Expected %d arguments but got %d.", native->arity, argCount);
+					return false;
+				}
+				Value result = native->function(argCount, vm.stackTop - argCount);
 				vm.stackTop -= argCount + 1;
 				push(result);
 				return true;
