@@ -1,8 +1,8 @@
 Urgent: debug getLine in chunk.c
 Pending: Challenge 20.1 (page 380)
-Pending: Challenges 24.1-4 (page 462)
+Pending: Challenge 24.4 (page 462)
 Pending: Challenge 25.1 (page 493)
-Pending: Challenges 26.* (page 524)
-Pending: Challenges 27.* (page 539)
-Pending: Challenge 29.3 (page 580)
-Pending: Challente 30.2 (page 603)
+Pending: Challenge 26.3 (page 524)
+Pending: Challenge 30.2 (page 603)
+Pending: Challenge S.1, add support for a list type
+Pending: Challenge S.2, add support for a dict type (prereq: 20.1 and probably S.1)
