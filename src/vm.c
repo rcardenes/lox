@@ -8,64 +8,11 @@
 #include "compiler.h"
 #include "debug.h"
 #include "memory.h"
+#include "native.h"
+// #include "list.h"
 #include "vm.h"
 
-static void runtimeError(const char*, ...);
-
-typedef struct {
-	const char* name;
-	int arity;
-	NativeFn func;
-} NativeDef;
-
-static NativeReturn clockNative(int, Value*);
-static NativeReturn toStringNative(int, Value*);
-
-NativeDef nativeFunctions[] = {
-	{ "clock", 0, clockNative },
-	{ "toString", 1, toStringNative },
-	{ NULL, -1, NULL }
-};
-
 VM vm;
-
-NativeReturn clockNative(int argCount, Value* args) {
-	NativeReturn result = {INTERPRET_OK, NUMBER_VAL((double)clock() / CLOCKS_PER_SEC)};
-	return result;
-}
-
-NativeReturn toStringNative(int argCount, Value* args) {
-	NativeReturn result = {INTERPRET_OK, NIL_VAL};
-
-	if (IS_BOOL(args[0])) {
-		if (AS_BOOL(args[0]))
-			result.value = OBJ_VAL(takeString("true", 4));
-		else
-			result.value = OBJ_VAL(takeString("false", 5));
-	}
-	else if (IS_NUMBER(args[0])) {
-		char str[128] = "foobar";
-		double d = AS_NUMBER(args[0]);
-		int i = (int)d;
-
-		if (d == i) {
-			snprintf(str, 128, "%d", i);
-		}
-		else {
-			snprintf(str, 128, "%g", d);
-		}
-		result.value = OBJ_VAL(copyString(str, strlen(str)));
-	}
-	else if (IS_NIL(args[0])) {
-		result.value = OBJ_VAL(takeString("nil", 3));
-	}
-	else {
-		runtimeError("toString accepts only numbers or booleans.");
-		result.status = NATIVE_RUNTIME_ERROR;
-	}
-
-	return result;
-}
 
 static void resetStack() {
 	vm.stackTop = vm.stack;
@@ -73,7 +20,7 @@ static void resetStack() {
 	vm.openUpvalues = NULL;
 }
 
-void runtimeError(const char* format, ...) {
+void vmRuntimeError(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
 	vfprintf(stderr, format, args);
@@ -123,10 +70,7 @@ void initVM() {
 	vm.initString = NULL;
 	vm.initString = copyString("init", 4);
 
-	NativeDef* current = &nativeFunctions[0];
-	while (current->name != NULL) {
-		defineNative(current++);
-	}
+	miscNativeFunctions(defineNative);
 }
 
 void freeVM() {
@@ -188,12 +132,12 @@ static bool call(ObjClosure* closure, int argCount) {
 	ObjFunction* function = closure->function;
 
 	if (argCount != function->arity) {
-		runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
+		vmRuntimeError("Expected %d arguments but got %d.", function->arity, argCount);
 		return false;
 	}
 
 	if (vm.frameCount == FRAMES_MAX) {
-		runtimeError("Stack overflow.");
+		vmRuntimeError("Stack overflow.");
 		return false;
 	}
 
@@ -219,7 +163,7 @@ static bool callValue(Value callee, int argCount) {
 					return call(klass->initializer, argCount);
 				}
 				else if (argCount != 0) {
-					runtimeError("Expected 0 arguments but got %d.", argCount);
+					vmRuntimeError("Expected 0 arguments but got %d.", argCount);
 					return false;
 				}
 				return true;
@@ -229,7 +173,7 @@ static bool callValue(Value callee, int argCount) {
 			case OBJ_NATIVE: {
 				ObjNative* native = AS_NATIVE(callee);
 				if (argCount != native->arity) {
-					runtimeError("Expected %d arguments but got %d.", native->arity, argCount);
+					vmRuntimeError("Expected %d arguments but got %d.", native->arity, argCount);
 					return false;
 				}
 				NativeReturn result = native->function(argCount, vm.stackTop - argCount);
@@ -244,14 +188,14 @@ static bool callValue(Value callee, int argCount) {
 				break; // Non-callable object type.
 		}
 	}
-	runtimeError("Can only call functions and classes.");
+	vmRuntimeError("Can only call functions and classes.");
 	return false;
 }
 
 static bool invokeFromClass(ObjClass* klass, ObjString* name, int argCount) {
 	Value method;
 	if (!tableGet(&klass->methods, name, &method)) {
-		runtimeError("Undefined property '%s'.", name->chars);
+		vmRuntimeError("Undefined property '%s'.", name->chars);
 		return false;
 	}
 	return call(AS_CLOSURE(method), argCount);
@@ -261,7 +205,7 @@ static bool invoke(ObjString* name, int argCount) {
 	Value receiver = peek(argCount);
 
 	if (!IS_INSTANCE(receiver)) {
-		runtimeError("Only instances have methods.");
+		vmRuntimeError("Only instances have methods.");
 		return false;
 	}
 
@@ -279,7 +223,7 @@ static bool invoke(ObjString* name, int argCount) {
 static bool bindMethod(ObjClass* klass, ObjString* name) {
 	Value method;
 	if (!tableGet(&klass->methods, name, &method)) {
-		runtimeError("Undefined property '%s'.", name->chars);
+		vmRuntimeError("Undefined property '%s'.", name->chars);
 		return false;
 	}
 
@@ -369,7 +313,7 @@ static InterpretResult run() {
 #define BINARY_OP(retType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-			runtimeError("Operands must be numbers."); \
+			vmRuntimeError("Operands must be numbers."); \
 			return INTERPRET_RUNTIME_ERROR; \
 		} \
 		double b = AS_NUMBER(pop()); \
@@ -415,7 +359,7 @@ static InterpretResult run() {
 				ObjString* name = READ_STRING();
 				Value value;
 				if (!tableGet(&vm.globals, name, &value)) {
-					runtimeError("Undefined variable '%s'.", name->chars);
+					vmRuntimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				push(value);
@@ -440,11 +384,11 @@ static InterpretResult run() {
 				ObjString* name = READ_STRING();
 				uint8_t properties;
 				if (!tableGetProperties(&vm.globals, name, &properties)) {
-					runtimeError("Undefined variable '%s'.", name->chars);
+					vmRuntimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				else if (properties & TABLE_IMMUTABLE) {
-					runtimeError("Unable to assign a value to immutable '%s'.", name->chars);
+					vmRuntimeError("Unable to assign a value to immutable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				tableSet(&vm.globals, name, peek(0));
@@ -462,7 +406,7 @@ static InterpretResult run() {
 			}
 			case OP_GET_PROPERTY: {
 				if (!IS_INSTANCE(peek(0))) {
-					runtimeError("Only instances have properties.");
+					vmRuntimeError("Only instances have properties.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
@@ -483,7 +427,7 @@ static InterpretResult run() {
 			}
 			case OP_SET_PROPERTY: {
 				if (!IS_INSTANCE(peek(1))) {
-					runtimeError("Only instances have properties.");
+					vmRuntimeError("Only instances have properties.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
@@ -527,7 +471,7 @@ static InterpretResult run() {
 				     replace(NUMBER_VAL(a + b));
 			     }
 			     else {
-				     runtimeError("Operands must be two numbers or two strings.");
+				     vmRuntimeError("Operands must be two numbers or two strings.");
 				     return INTERPRET_RUNTIME_ERROR;
 			     }
 			     break;
@@ -541,7 +485,7 @@ static InterpretResult run() {
 			case OP_NEGATE: {
 				Value constant = peek(0);
 				if (!IS_NUMBER(constant)) {
-					runtimeError("Operand must be a number.");
+					vmRuntimeError("Operand must be a number.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				replace(NUMBER_VAL(-AS_NUMBER(constant)));
@@ -635,7 +579,7 @@ static InterpretResult run() {
 				Value superclass = peek(1);
 
 				if (!IS_CLASS(superclass)) {
-					runtimeError("Superclass must be a class.");
+					vmRuntimeError("Superclass must be a class.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 				ObjClass* subclass = AS_CLASS(peek(0));

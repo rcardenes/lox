@@ -7,7 +7,7 @@ TARGETSRC := $(patsubst %,%.c,$(TARGETS))
 TARGETDIR := ../bin
 BUILDDIR := ../build
 LOCALDEPS := main.c chunk.c memory.c debug.c value.c vm.c compiler.c scanner.c \
-	     object.c table.c
+	     object.c table.c native.c
 OBJFILES := $(patsubst %.c,%.o,$(patsubst %,$(BUILDDIR)/%,$(LOCALDEPS)))
 SOURCES := $(TARGETSRC) $(LOCALDEPS)
 DEPFILES := $(SOURCES:%.c=$(DEPDIR)/%.d)

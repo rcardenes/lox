@@ -47,4 +47,6 @@ InterpretResult interpret(const char*);
 void push(Value value);
 Value pop();
 
+void vmRuntimeError(const char*, ...);
+
 #endif // vlox_vm_h
