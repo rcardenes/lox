@@ -6,7 +6,7 @@
 static NativeReturn clockNative(int, Value*);
 static NativeReturn toStringNative(int, Value*);
 
-NativeDef nativeFunctions[] = {
+static NativeDef nativeFunctions[] = {
 	{ "clock", 0, clockNative },
 	{ "toString", 1, toStringNative },
 	{ NULL, -1, NULL }

@@ -67,6 +67,49 @@ ObjInstance* newInstance(ObjClass* klass) {
 	return instance;
 }
 
+ObjList* newList() {
+	ObjList* list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
+	initValueArray(&list->items);
+
+	return list;
+}
+
+void appendToList(ObjList* list, Value value) {
+	writeValueArray(&list->items, value);
+}
+
+Value indexFromList(ObjList* list, int index) {
+	return list->items.values[index];
+}
+
+void storeToList(ObjList* list, int index, Value value) {
+	list->items.values[index] = value;
+}
+
+void deleteFromList(ObjList* list, int index) {
+	ValueArray* items = &list->items;
+	for (int i = index + 1; i < items->count; i++) {
+		items->values[i - 1] = items->values[i];
+	}
+	items->values[items->count - 1] = NIL_VAL;
+	items->count -= 1;
+}
+
+bool isValidListIndex(ObjList* list, int index) {
+	return (index >= 0) && (index < list->items.count);
+}
+
+ObjList* sliceFromList(ObjList* list, int start, int stop, int step) {
+	ObjList* slice = newList();
+	Value* values = list->items.values;
+
+	for (int i = start; i < stop; i += step) {
+		appendToList(slice, values[i]);
+	}
+
+	return slice;
+}
+
 ObjNative* newNative(NativeFn function, int arity) {
 	ObjNative* native =  ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
 	native->function = function;
@@ -198,6 +241,25 @@ void printObject(Value value) {
 		case OBJ_INSTANCE:
 			printf("<%s instance>", AS_INSTANCE(value)->klass->name->chars);
 			break;
+		case OBJ_LIST: {
+			ObjList* list = AS_LIST(value);
+			int count = list->items.count;
+			printf("<list [");
+			if (count >= 0) {
+				int i = 0;
+				printValue(list->items.values[0]);
+				for (i = 1; i < count; i++) {
+					printf(", ");
+					if (i > 5 && count > 7) {
+						printf("...");
+						break;
+					}
+					printValue(list->items.values[i]);
+				}
+			}
+			printf("]>");
+			break;
+		}
 		case OBJ_NATIVE:
 			printf("<native fn>");
 			break;

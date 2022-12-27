@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "native.h"
-// #include "list.h"
+#include "list.h"
 #include "vm.h"
 
 VM vm;
@@ -71,6 +71,7 @@ void initVM() {
 	vm.initString = copyString("init", 4);
 
 	miscNativeFunctions(defineNative);
+	listNativeFunctions(defineNative);
 }
 
 void freeVM() {
