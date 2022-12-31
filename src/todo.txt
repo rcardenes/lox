@@ -1,14 +1,6 @@
 General semantics taken from:
   https://calebschoepp.com/blog/2020/adding-a-list-data-type-to-lox
 
-* Create bytecode for list handling
-  - OP_BUILD_LIST itemCount
-    - Creates a new list object, appending the following "itemCount" objects in the bytecode
-  - OP_INDEX_SUBSCR index
-    - 
 * Create specific syntax for lists
-  - Initialization via brackets:
-    * []                       // Empty list
-    * [1, 2, nil, "Foo bar"]
     * [1, 2, ...25]            // 
 

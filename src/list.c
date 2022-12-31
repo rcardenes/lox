@@ -79,7 +79,7 @@ NativeReturn get(int argCount, Value* args) {
 		RET_ERROR("Invalid index %d", i);
 	}
 
-	RET_OK(list->items.values[i]);
+	RET_OK(indexFromList(list, i));
 }
 
 NativeReturn delete(int argCount, Value* args) {

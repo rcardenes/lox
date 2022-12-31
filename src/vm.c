@@ -102,25 +102,37 @@ Value pop() {
 	return *vm.stackTop;
 }
 
+static void popMany(int n) {
+	vm.stackTop -= n;
+}
+
 /*
  * Inline is C99/C11 compliant
  */
-static
-inline int read_24bit_int() {
-	CallFrame* frame = &vm.frames[vm.frameCount - 1];
-	int res = *frame->ip++;
-	res |= (*frame->ip++) << 8;
-	return res | ((*frame->ip++) << 16);
-}
 
-static Value readConstant() {
-	CallFrame* frame = &vm.frames[vm.frameCount - 1];
+static inline int readConstantIndex(CallFrame* frame) {
+	// Integers used for indices, etc., can be 23 bits long, but it would
+	// be a waste to use 3 bytes all the time for indices that are mostly
+	// going to be fine with just 7 bits!
+	//
+	// Thus, we use some compression.
+	if (frame == NULL)
+		frame = &vm.frames[vm.frameCount - 1];
+
 	int index = *(frame->ip++);
+
 	if (index > 127) {
 		index = (index & 0x7F) << 16;
 		index |= (*frame->ip++) << 8;
 		index |= (*frame->ip++);
 	}
+
+	return index;
+}
+
+static Value readConstant() {
+	CallFrame* frame = &vm.frames[vm.frameCount - 1];
+	int index = readConstantIndex(frame);
 	return frame->closure->function->chunk.constants.values[index];
 }
 
@@ -181,7 +193,7 @@ static bool callValue(Value callee, int argCount) {
 				if (result.status != NATIVE_OK) {
 					return false;
 				}
-				vm.stackTop -= argCount + 1;
+				popMany(argCount + 1);
 				push(result.value);
 				return true;
 			}
@@ -592,6 +604,76 @@ static InterpretResult run() {
 			case OP_METHOD:
 				defineMethod(READ_STRING());
 				break;
+			case OP_BUILD_LIST: {
+				ObjList* list = newList();
+				int count = readConstantIndex(NULL);
+
+				// This is to ensure that the object is not sweeped while building it.
+				push(OBJ_VAL(list));
+				for (int i = count; i > 0; i--) {
+					appendToList(list, peek(i));
+				}
+				popMany(count + 1);
+
+				push(OBJ_VAL(list));
+				break;
+			}
+			case OP_INDEX_SUBSCR:
+			{
+				Value vIndex = pop();
+				Value vList = pop();
+				Value result;
+
+				if (!IS_LIST(vList)) {
+					vmRuntimeError("Invalid type to index into.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				if (!IS_NUMBER(vIndex)) {
+					vmRuntimeError("List index is not a number");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjList* list = AS_LIST(vList);
+				int index = AS_NUMBER(vIndex);
+
+				if (!isValidListIndex(list, index)) {
+					vmRuntimeError("List index %d is out of range.", index);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				result = indexFromList(list, index);
+				push(result);
+				break;
+			}
+			case OP_STORE_SUBSCR:
+			{
+				Value item = pop();
+				Value vIndex = pop();
+				Value vList = pop();
+
+				if (!IS_LIST(vList)) {
+					vmRuntimeError("Invalid type to index into.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				if (!IS_NUMBER(vIndex)) {
+					vmRuntimeError("List index is not a number");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjList* list = AS_LIST(vList);
+				int index = AS_NUMBER(vIndex);
+
+				if (!isValidListIndex(list, index)) {
+					vmRuntimeError("List index %d is out of range.", index);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				storeToList(list, index, item);
+				push(item);
+				break;
+			}
 		}
 	}
 
