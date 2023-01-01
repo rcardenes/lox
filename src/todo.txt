@@ -1,6 +1,14 @@
-General semantics taken from:
+List semantics and other stuff taken from:
   https://calebschoepp.com/blog/2020/adding-a-list-data-type-to-lox
 
-* Create specific syntax for lists
-    * [1, 2, ...25]            // 
+Challenges (from Caleb's site):
+    * Implement negative indexes to access from the end (slicing was there already)
+    * Make append and delete syntactic statements
+      - Alternatively, make them methods of the list type
+    * Try adding indexing for the strings
+    * Shrink the list if it deallocates enough memory
 
+Challenges (own):
+    * Separate integer and float types.
+    * Measure the efficiency of list initialization. See how it can be improved
+    * Add slicing syntax for list/sequences
