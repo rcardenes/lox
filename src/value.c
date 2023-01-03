@@ -36,6 +36,9 @@ void printValue(Value value) {
 	else if (IS_NIL(value)) {
 		printf("nil");
 	}
+	else if (IS_INT(value)) {
+		printf("%lld", AS_INT(value));
+	}
 	else if (IS_NUMBER(value)) {
 		double d = AS_NUMBER(value);
 		int i = (int)d;
@@ -53,6 +56,7 @@ void printValue(Value value) {
 	switch (value.type) {
 		case VAL_BOOL: printf(AS_BOOL(value) ? "true" : "false"); break;
 		case VAL_NIL: printf("nil"); break;
+		case VAL_INT: printf("%lld", AS_INT(value));
 		case VAL_NUMBER: {
 			double d = AS_NUMBER(value);
 			int i = (int)d;
@@ -71,17 +75,28 @@ void printValue(Value value) {
 
 bool valuesEqual(Value a, Value b) {
 #ifdef NAN_BOXING
-	if (IS_NUMBER(a) && IS_NUMBER(b)) {
-		return AS_NUMBER(a) == AS_NUMBER(b);
+	if (IS_INT(a) && IS_INT(b)) {
+		return AS_INT(a) == AS_INT(b);
+	}
+	if (IS_NUMERIC(a) && IS_NUMERIC(b)) {
+		return (IS_INT(a) ? AS_INT(a) : AS_NUMBER(a)) == (IS_INT(b) ? AS_INT(b) : AS_NUMBER(b));
 	}
 	else
 		return a == b;
 #else
+	if (IS_NUMERIC(a) && IS_NUMERIC(b)) {
+		if (a.type == VAL_INT && b.type == VAL_INT) {
+			return AS_INT(a) == AS_INT(b);
+		}
+		else {
+			return (IS_INT(a) ? AS_INT(a) : AS_NUMBER(a)) == (IS_INT(b) ? AS_INT(b) : AS_NUMBER(b));
+		}
+	}
+
 	if (a.type != b.type) return false;
 	switch (a.type) {
 		case VAL_BOOL: return AS_BOOL(a) == AS_BOOL(b);
 		case VAL_NIL: return true;
-		case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
 		case VAL_OBJ: return AS_OBJ(a) == AS_OBJ(a);
 		default: return false; // Unreachable
 	}
