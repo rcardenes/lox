@@ -48,7 +48,9 @@ typedef enum {
 	OP_METHOD,
 	OP_BUILD_LIST,
 	OP_INDEX_SUBSCR,
-	OP_STORE_SUBSCR
+	OP_STORE_SUBSCR,
+	OP_APPEND_TO,
+	OP_DELETE_FROM
 } OpCode;
 
 typedef struct {

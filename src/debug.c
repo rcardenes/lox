@@ -29,7 +29,7 @@ static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset)
 	return offset + 3;
 }
 
-static int decodeConstantIndex(Chunk* chunk, int offset, uint32_t* cnst) {
+static int decodeConstantIndex(Chunk* chunk, int offset, uint32_t* cnst, uint32_t* index) {
 	uint32_t constant = chunk->code[offset + 1];
 
 	if (constant > 127 ) {
@@ -39,7 +39,11 @@ static int decodeConstantIndex(Chunk* chunk, int offset, uint32_t* cnst) {
 	}
 
 	offset += (constant < 128 ? 2 : 4);
-	*cnst = constant;
+
+	if (index != NULL)
+		*index = constant;
+	if (cnst != NULL)
+		*cnst = constant;
 
 	return offset;
 }
@@ -47,7 +51,7 @@ static int decodeConstantIndex(Chunk* chunk, int offset, uint32_t* cnst) {
 static int constantInstruction(const char* name, Chunk* chunk, int offset) {
 	uint32_t constant;
 
-	offset = decodeConstantIndex(chunk, offset, &constant);
+	offset = decodeConstantIndex(chunk, offset, &constant, NULL);
 
 	printf("%-17s %18d '", name, constant);
 	printValue(chunk->constants.values[constant]);
@@ -59,7 +63,7 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
 static int invokeInstruction(const char* name, Chunk* chunk, int offset) {
 	uint32_t constant;
 
-	offset = decodeConstantIndex(chunk, offset, &constant);
+	offset = decodeConstantIndex(chunk, offset, &constant, NULL);
 	uint8_t argCount = chunk->code[offset];
 	printf("%-17s (%d args) %9d '", name, argCount, constant);
 	printValue(chunk->constants.values[constant]);
@@ -147,7 +151,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 		case OP_CLOSURE: {
 			uint32_t constant;
 
-			offset = decodeConstantIndex(chunk, offset, &constant);
+			offset = decodeConstantIndex(chunk, offset, &constant, NULL);
 
 			printf("%-17s %18d '", "OP_CLOSURE", constant);
 			printValue(chunk->constants.values[constant]);
@@ -171,7 +175,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 		case OP_CLASS: {
 			uint32_t constant;
 
-			offset = decodeConstantIndex(chunk, offset, &constant);
+			offset = decodeConstantIndex(chunk, offset, &constant, NULL);
 
 			printf("%-17s %18d '", "OP_CLASS", constant);
 			printValue(chunk->constants.values[constant]);
@@ -183,13 +187,30 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 		case OP_METHOD: {
 			uint32_t constant;
 
-			offset = decodeConstantIndex(chunk, offset, &constant);
+			offset = decodeConstantIndex(chunk, offset, &constant, NULL);
 
 			printf("%-17s %18d '", "OP_METHOD", constant);
 			printValue(chunk->constants.values[constant]);
 			printf("'\n");
 			return offset;
 		}
+		case OP_BUILD_LIST: {
+			uint32_t index;
+
+			offset = decodeConstantIndex(chunk, offset, NULL, &index);
+
+			printf("%-17s %18d*\n", "OP_BUILD_LIST", index);
+
+			return offset;
+		}
+		case OP_INDEX_SUBSCR:
+			return simpleInstruction("OP_INDEX_SUBSCR", offset);
+		case OP_STORE_SUBSCR:
+			return simpleInstruction("OP_STORE_SUBSCR", offset);
+		case OP_APPEND_TO:
+			return simpleInstruction("OP_APPEND_TO", offset);
+		case OP_DELETE_FROM:
+			return simpleInstruction("OP_DELETE_FROM", offset);
 		default:
 			printf("Unknown opcode %d\n", instruction);
 			return offset + 1;

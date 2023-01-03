@@ -531,8 +531,11 @@ static void string(bool) {
 
 static void namedVariable(Token name, bool canAssign) {
 	uint8_t getOp, setOp;
+	char nameChars[name.length + 1];
 	bool isMutable = true;
 	int arg = resolveLocal(current, &name, &isMutable);
+
+	snprintf(nameChars, name.length + 1, "%s", name.start);
 
 	if (arg != -1) {
 		getOp = OP_GET_LOCAL;
@@ -888,6 +891,25 @@ static void emitLoopJump(LoopJumpType type) {
 	}
 }
 
+static void appendStatement() {
+	expression();
+	expression();
+	consume(TOKEN_SEMICOLON, "Expect ';' after append expression.");
+	emitByte(OP_APPEND_TO);
+}
+
+static void deleteStatement() {
+	if (!match(TOKEN_IDENTIFIER)) {
+		error("Expected an identifier after delete.");
+	}
+	variable(false);
+	consume(TOKEN_LEFT_BRACKET, "Expect '[' after identifier.");
+	expression();
+	consume(TOKEN_RIGHT_BRACKET, "Expect ']' after index expression.");
+	consume(TOKEN_SEMICOLON, "Expect ';' after delete expression.");
+	emitByte(OP_DELETE_FROM);
+}
+
 static void breakStatement() {
 	consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
 
@@ -1142,11 +1164,17 @@ void statement() {
 	if (match(TOKEN_PRINT)) {
 		printStatement();
 	}
+	else if (match(TOKEN_APPEND)) {
+		appendStatement();
+	}
 	else if (match(TOKEN_BREAK)) {
 		breakStatement();
 	}
 	else if (match(TOKEN_CONTINUE)) {
 		continueStatement();
+	}
+	else if (match(TOKEN_DELETE)) {
+		deleteStatement();
 	}
 	else if (match(TOKEN_FOR)) {
 		forStatement();

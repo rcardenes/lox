@@ -714,6 +714,44 @@ static InterpretResult run() {
 				push(OBJ_VAL(list));
 				break;
 			}
+			case OP_APPEND_TO: {
+				Value element = pop();
+				Value vList = pop();
+
+				if (!IS_OBJ(vList) || !IS_LIST(vList)) {
+					vmRuntimeError("Can only append to a list.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				appendToList(AS_LIST(vList), element);
+				break;
+			}
+			case OP_DELETE_FROM: {
+				Value vIndex = pop();
+				Value vList = pop();
+
+				if (!IS_INT(vIndex)) {
+					vmRuntimeError("Indices can only be integers.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				int64_t index = AS_INT(vIndex);
+
+				if (!IS_OBJ(vList) || !IS_LIST(vList)) {
+					vmRuntimeError("Can only delete from a list.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjList* list = AS_LIST(vList);
+
+				if (!isValidListIndex(list, index)) {
+					vmRuntimeError("Not a valid index: %d.", index);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				deleteFromList(list, index);
+				break;
+			}
 			case OP_INDEX_SUBSCR:
 			{
 				Value vIndex = pop();
