@@ -717,28 +717,41 @@ static InterpretResult run() {
 			case OP_INDEX_SUBSCR:
 			{
 				Value vIndex = pop();
-				Value vList = pop();
+				Value vIndexed = pop();
 				Value result;
 
-				if (!IS_LIST(vList)) {
+				if (!IS_INT(vIndex)) {
+					vmRuntimeError("Index is not an integer");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				int index = AS_INT(vIndex);
+
+				if (IS_LIST(vIndexed)) {
+					ObjList* list = AS_LIST(vIndexed);
+
+					if (!isValidListIndex(list, index)) {
+						vmRuntimeError("List index %d is out of range.", index);
+						return INTERPRET_RUNTIME_ERROR;
+					}
+
+					result = indexFromList(list, index);
+				}
+				else if (IS_STRING(vIndexed)) {
+					ObjString* string = AS_STRING(vIndexed);
+
+					if (!isValidStringIndex(string, index)) {
+						vmRuntimeError("List index %d is out of range.", index);
+						return INTERPRET_RUNTIME_ERROR;
+					}
+
+					result = indexFromString(string, index);
+				}
+				else {
 					vmRuntimeError("Invalid type to index into.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
-				if (!IS_INT(vIndex)) {
-					vmRuntimeError("List index is not an integer");
-					return INTERPRET_RUNTIME_ERROR;
-				}
-
-				ObjList* list = AS_LIST(vList);
-				int index = AS_INT(vIndex);
-
-				if (!isValidListIndex(list, index)) {
-					vmRuntimeError("List index %d is out of range.", index);
-					return INTERPRET_RUNTIME_ERROR;
-				}
-
-				result = indexFromList(list, index);
 				push(result);
 				break;
 			}

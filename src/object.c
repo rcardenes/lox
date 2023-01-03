@@ -80,7 +80,7 @@ void appendToList(ObjList* list, Value value) {
 
 Value indexFromList(ObjList* list, int index) {
 	if (index < 0)
-		index = -(index + 1);
+		index = list->items.count + index;
 	return list->items.values[index];
 }
 
@@ -91,7 +91,7 @@ void storeToList(ObjList* list, int index, Value value) {
 void deleteFromList(ObjList* list, int index) {
 	ValueArray* items = &list->items;
 	if (index < 0)
-		index = -(index + 1);
+		index = list->items.count + index;
 
 	for (int i = index + 1; i < items->count; i++) {
 		items->values[i - 1] = items->values[i];
@@ -100,9 +100,13 @@ void deleteFromList(ObjList* list, int index) {
 	items->count -= 1;
 }
 
+static inline bool isValidIndex(int index, int max) {
+	return ((index >= 0) && (index < max))
+	    || ((index < 0) && ((-index) <= max));
+}
+
 bool isValidListIndex(ObjList* list, int index) {
-	return ((index >= 0) && (index < list->items.count))
-	    || ((index < 0) && ((-index) <= list->items.count));
+	return isValidIndex(index, list->items.count);
 }
 
 ObjList* sliceFromList(ObjList* list, int start, int stop, int step) {
@@ -197,6 +201,23 @@ ObjString* copyStrings(StringList* list) {
 	pop();
 
 	return (ObjString*)string;
+}
+
+bool isValidStringIndex(ObjString* string, int index) {
+	return isValidIndex(index, string->length);
+}
+
+Value indexFromString(ObjString* string, int index) {
+	if (index < 0)
+		index = string->length + index;
+
+	ObjStringDynamic* newString = (ObjStringDynamic*)allocateString(1, 0, true);
+	newString->buffer[0] = string->chars[index];
+	newString->buffer[1] = '\0';
+	newString->string.chars = newString->buffer;
+	newString->string.hash = hashString(newString->buffer, 1);
+
+	return OBJ_VAL(newString);
 }
 
 ObjUpvalue* newUpvalue(Value* slot) {

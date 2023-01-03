@@ -15,8 +15,7 @@
 #define IS_INSTANCE(value)	isObjType(value, OBJ_INSTANCE)
 #define IS_LIST(value)		isObjType(value, OBJ_LIST)
 #define IS_NATIVE(value)	isObjType(value, OBJ_NATIVE)
-#define IS_STRING(value)	(isObjType(value, OBJ_STRING_DYNAMIC) || \
-				 isObjType(value, OBJ_STRING))
+#define IS_STRING(value)	isString(value)
 
 #define AS_BOUND_METHOD(value)	((ObjBoundMethod*)AS_OBJ(value))
 #define AS_CLASS(value)		((ObjClass*)AS_OBJ(value))
@@ -144,6 +143,8 @@ ObjNative* newNative(NativeFn, int);
 ObjString* takeString(char*, int);
 ObjString* copyStrings(StringList*);
 ObjString* copyString(const char*, int);
+bool isValidStringIndex(ObjString*, int);
+Value indexFromString(ObjString*, int);
 ObjUpvalue* newUpvalue(Value*);
 void printObject(Value);
 void initStringList(StringList*);
@@ -159,6 +160,10 @@ ObjList* sliceFromList(ObjList*, int, int, int);
 
 static inline bool isObjType(Value value, ObjType type) {
 	return IS_OBJ(value) && AS_OBJ(value)->type == type;
+}
+
+static inline bool isString(Value value) {
+	return isObjType(value, OBJ_STRING_DYNAMIC) || isObjType(value, OBJ_STRING);
 }
 
 #endif // vlox_object_h
