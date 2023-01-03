@@ -112,6 +112,7 @@ typedef struct {
 bool valuesEqual(Value, Value);
 void initValueArray(ValueArray*);
 void writeValueArray(ValueArray*, Value);
+void maybeShrinkArray(ValueArray*);
 void freeValueArray(ValueArray*);
 void printValue(Value);
 

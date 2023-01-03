@@ -4,7 +4,6 @@ List semantics and other stuff taken from:
 Challenges (from Caleb's site):
     * Make append and delete syntactic statements
       - Alternatively, make them methods of the list type
-    * Shrink the list if it deallocates enough memory
 
 Challenges (own):
     * Measure the efficiency of list initialization. See how it can be improved

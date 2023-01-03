@@ -23,6 +23,16 @@ void writeValueArray(ValueArray* array, Value value) {
 	array->count++;
 }
 
+void maybeShrinkArray(ValueArray* array) {
+	int oldCapacity = array->capacity;
+	int halfCapacity = oldCapacity / 2;
+	if (oldCapacity > 8 && array->count < halfCapacity) {
+		array->capacity = halfCapacity;
+		array->values = GROW_ARRAY(Value, array->values,
+				oldCapacity, array->capacity);
+	}
+}
+
 void freeValueArray(ValueArray* array) {
 	FREE_ARRAY(Value, array->values, array->capacity);
 	initValueArray(array);

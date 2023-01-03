@@ -98,6 +98,8 @@ void deleteFromList(ObjList* list, int index) {
 	}
 	items->values[items->count - 1] = NIL_VAL;
 	items->count -= 1;
+
+	maybeShrinkArray(items);
 }
 
 static inline bool isValidIndex(int index, int max) {
