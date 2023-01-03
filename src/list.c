@@ -60,8 +60,8 @@ NativeReturn get(int argCount, Value* args) {
 	if (!IS_OBJ(args[0]) || !IS_LIST(args[0])) {
 		RET_ERROR("Expected a list as first argument.");
 	}
-	else if (!IS_INT(args[1]) || AS_INT(args[1]) < 0) {
-		RET_ERROR("Expected a non-negative integer as second argument.");
+	else if (!IS_INT(args[1])) {
+		RET_ERROR("Expected an integer as second argument.");
 	}
 
 	ObjList* list = AS_LIST(args[0]);
@@ -109,24 +109,31 @@ NativeReturn slice(int argCount, Value* args) {
 	if (!IS_OBJ(args[0]) || !IS_LIST(args[0])) {
 		RET_ERROR("Expected a list as first argument.");
 	}
-	else if (!IS_INT(args[1]) || AS_INT(args[1]) < 0) {
-		RET_ERROR("Expected a non-negative integer as second argument.");
+	else if (!IS_INT(args[1])) {
+		RET_ERROR("Expected an integer as second argument.");
 	}
-	else if (!IS_INT(args[2]) || AS_INT(args[2]) < 0) {
-		RET_ERROR("Expected a non-negative integer as third argument.");
+	else if (!IS_INT(args[2])) {
+		RET_ERROR("Expected an integer as third argument.");
 	}
-	else if (!IS_INT(args[3]) || AS_INT(args[3]) < 1) {
-		RET_ERROR("Expected a positive integer as fourth argument.");
+	else if (!IS_INT(args[3]) || AS_INT(args[3]) == 0) {
+		RET_ERROR("Expected a non-zero integer as fourth argument.");
 	}
 
 	ObjList* list = AS_LIST(args[0]);
 	int64_t start = AS_INT(args[1]);
 	int64_t stop = AS_INT(args[2]);
 	int64_t step = AS_INT(args[3]);
+	if (start < 0)
+		start = -(start + 1);
+	if (stop < 0)
+		stop = -(stop + 1);
 	int len = list->items.count;
 
-	if (stop >= len) {
+	if (step > 0 && stop >= len) {
 		stop = len;
+	}
+	else if (step < 0 && start >= len) {
+		start = len - 1;
 	}
 
 	RET_OK(OBJ_VAL(sliceFromList(list, start, stop, step)));

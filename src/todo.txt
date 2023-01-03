@@ -2,7 +2,6 @@ List semantics and other stuff taken from:
   https://calebschoepp.com/blog/2020/adding-a-list-data-type-to-lox
 
 Challenges (from Caleb's site):
-    * Implement negative indexes to access from the end (slicing was there already)
     * Make append and delete syntactic statements
       - Alternatively, make them methods of the list type
     * Try adding indexing for the strings

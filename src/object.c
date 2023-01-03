@@ -79,6 +79,8 @@ void appendToList(ObjList* list, Value value) {
 }
 
 Value indexFromList(ObjList* list, int index) {
+	if (index < 0)
+		index = -(index + 1);
 	return list->items.values[index];
 }
 
@@ -88,6 +90,9 @@ void storeToList(ObjList* list, int index, Value value) {
 
 void deleteFromList(ObjList* list, int index) {
 	ValueArray* items = &list->items;
+	if (index < 0)
+		index = -(index + 1);
+
 	for (int i = index + 1; i < items->count; i++) {
 		items->values[i - 1] = items->values[i];
 	}
@@ -96,15 +101,21 @@ void deleteFromList(ObjList* list, int index) {
 }
 
 bool isValidListIndex(ObjList* list, int index) {
-	return (index >= 0) && (index < list->items.count);
+	return ((index >= 0) && (index < list->items.count))
+	    || ((index < 0) && ((-index) <= list->items.count));
 }
 
 ObjList* sliceFromList(ObjList* list, int start, int stop, int step) {
 	ObjList* slice = newList();
-	Value* values = list->items.values;
 
-	for (int i = start; i < stop; i += step) {
-		appendToList(slice, values[i]);
+	if (step > 0) {
+		for (int i = start; i >= 0 && i < stop; i += step) {
+			appendToList(slice, indexFromList(list, i));
+		}
+	} else if (stop < start) {
+		for (int i = start; i >= 0 && i > stop; i += step) {
+			appendToList(slice, indexFromList(list, i));
+		}
 	}
 
 	return slice;
@@ -245,7 +256,7 @@ void printObject(Value value) {
 			ObjList* list = AS_LIST(value);
 			int count = list->items.count;
 			printf("<list [");
-			if (count >= 0) {
+			if (count > 0) {
 				int i = 0;
 				printValue(list->items.values[0]);
 				for (i = 1; i < count; i++) {
