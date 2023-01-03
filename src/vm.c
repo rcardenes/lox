@@ -314,6 +314,95 @@ static void concatenate() {
 	resetStringList(&sl);
 }
 
+typedef enum {
+	ArithAdd,
+	ArithSub,
+	ArithMul,
+	ArithDiv
+} ArithOp;
+
+static bool doArith(ArithOp op) {
+	Value vb = peek(0);
+	Value va = peek(1);
+	Value res;
+
+	if (!IS_NUMERIC(va) || !IS_NUMERIC(vb)) {
+		vmRuntimeError("Operands must be numeric.");
+		return false;
+	}
+
+	if (IS_INT(va) && IS_INT(vb)) {
+		int64_t b = AS_INT(pop());
+		int64_t a = AS_INT(va);
+		switch (op) {
+			case ArithAdd:
+				res = INT_VAL(a + b);
+				break;
+			case ArithSub:
+				res = INT_VAL(a - b);
+				break;
+			case ArithMul:
+				res = INT_VAL(a * b);
+				break;
+			case ArithDiv:
+				res = INT_VAL(a / b);
+				break;
+		}
+	}
+	else {
+		double b = IS_INT(vb) ? AS_INT(vb) : AS_NUMBER(vb);
+		double a = IS_INT(va) ? AS_INT(va) : AS_NUMBER(va);
+		pop();
+		switch (op) {
+			case ArithAdd:
+				res = NUMBER_VAL(a + b);
+				break;
+			case ArithSub:
+				res = NUMBER_VAL(a - b);
+				break;
+			case ArithMul:
+				res = NUMBER_VAL(a * b);
+				break;
+			case ArithDiv:
+				res = NUMBER_VAL(a / b);
+				break;
+		}
+	}
+
+	replace(res);
+	return true;
+}
+
+typedef enum {
+	BoolGreaterThan,
+	BoolLessThan
+} BoolOp;
+
+static bool doBool(BoolOp op) {
+	Value vb = peek(0);
+	Value va = peek(1);
+	Value res;
+
+	if (!IS_NUMERIC(va) || !IS_NUMERIC(vb)) {
+		vmRuntimeError("Operands must be numeric.");
+		return false;
+	}
+
+	pop();
+
+	switch (op) {
+		case BoolGreaterThan:
+			res = BOOL_VAL((IS_INT(va) ? AS_INT(va) : AS_NUMBER(va)) > (IS_INT(vb) ? AS_INT(vb) : AS_NUMBER(vb)));
+			break;
+		case BoolLessThan:
+			res = BOOL_VAL((IS_INT(va) ? AS_INT(va) : AS_NUMBER(va)) < (IS_INT(vb) ? AS_INT(vb) : AS_NUMBER(vb)));
+			break;
+	}
+
+	replace(res);
+	return true;
+}
+
 static InterpretResult run() {
 	CallFrame* frame = &vm.frames[vm.frameCount - 1];
 //	printObject(OBJ_VAL(frame->closure->function)); printf("\n");
@@ -323,15 +412,17 @@ static InterpretResult run() {
 #define READ_SHORT() \
 	(frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define READ_STRING() AS_STRING(readConstant())
-#define BINARY_OP(retType, op) \
+#define BIN_BOOL(op) \
 	do { \
-		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-			vmRuntimeError("Operands must be numbers."); \
+		if (!doBool(op)) { \
 			return INTERPRET_RUNTIME_ERROR; \
 		} \
-		double b = AS_NUMBER(pop()); \
-		double a = AS_NUMBER(peek(0)); \
-		replace(retType(a op b)); \
+	} while (false)
+#define BIN_ARITH(op) \
+	do { \
+		if (!doArith(op)) { \
+			return INTERPRET_RUNTIME_ERROR; \
+		} \
 	} while (false)
 
 	for (;;) {
@@ -472,36 +563,41 @@ static InterpretResult run() {
 				       replace(BOOL_VAL(valuesEqual(a, b)));
 				       break;
 			       }
-			case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
-			case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
+			case OP_GREATER: BIN_BOOL(BoolGreaterThan); break;
+			case OP_LESS: BIN_BOOL(BoolLessThan); break;
 			case OP_ADD: {
-			     if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
-				     concatenate();
-			     }
-			     else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
-				     double b = AS_NUMBER(pop());
-				     double a = AS_NUMBER(peek(0));
-				     replace(NUMBER_VAL(a + b));
-			     }
-			     else {
-				     vmRuntimeError("Operands must be two numbers or two strings.");
-				     return INTERPRET_RUNTIME_ERROR;
-			     }
-			     break;
+				Value va = peek(1);
+				Value vb = peek(0);
+				if (IS_STRING(va) && IS_STRING(vb)) {
+					concatenate();
+				}
+				else if (IS_NUMERIC(va) && IS_NUMERIC(vb)) {
+					doArith(ArithAdd);
+				}
+				else {
+					vmRuntimeError("Operands must be two numbers or two strings.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
 			}
-			case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-			case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
-			case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
+			case OP_SUBTRACT: BIN_ARITH(ArithSub); break;
+			case OP_MULTIPLY: BIN_ARITH(ArithMul); break;
+			case OP_DIVIDE: BIN_ARITH(ArithDiv); break;
 			case OP_NOT:
 				replace(BOOL_VAL(isFalsey(peek(0))));
 				break;
 			case OP_NEGATE: {
 				Value constant = peek(0);
-				if (!IS_NUMBER(constant)) {
-					vmRuntimeError("Operand must be a number.");
+				if (IS_NUMBER(constant)) {
+					replace(NUMBER_VAL(-AS_NUMBER(constant)));
+				}
+				else if (IS_INT(constant)) {
+					replace(INT_VAL(-AS_INT(constant)));
+				}
+				else {
+					vmRuntimeError("Operand must be numeric.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
-				replace(NUMBER_VAL(-AS_NUMBER(constant)));
 				break;
 			}
 			case OP_PRINT: {
@@ -629,13 +725,13 @@ static InterpretResult run() {
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
-				if (!IS_NUMBER(vIndex)) {
-					vmRuntimeError("List index is not a number");
+				if (!IS_INT(vIndex)) {
+					vmRuntimeError("List index is not an integer");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
 				ObjList* list = AS_LIST(vList);
-				int index = AS_NUMBER(vIndex);
+				int index = AS_INT(vIndex);
 
 				if (!isValidListIndex(list, index)) {
 					vmRuntimeError("List index %d is out of range.", index);
@@ -657,13 +753,13 @@ static InterpretResult run() {
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
-				if (!IS_NUMBER(vIndex)) {
-					vmRuntimeError("List index is not a number");
+				if (!IS_INT(vIndex)) {
+					vmRuntimeError("List index is not an integer");
 					return INTERPRET_RUNTIME_ERROR;
 				}
 
 				ObjList* list = AS_LIST(vList);
-				int index = AS_NUMBER(vIndex);
+				int index = AS_INT(vIndex);
 
 				if (!isValidListIndex(list, index)) {
 					vmRuntimeError("List index %d is out of range.", index);
@@ -681,7 +777,8 @@ static InterpretResult run() {
 #undef READ_SHORT
 #undef READ_STRING
 #undef READ_LONG_CONSTANT
-#undef BINARY_OP
+#undef BIN_BOOL
+#undef BIN_ARITH
 }
 
 InterpretResult interpret(const char* source) {

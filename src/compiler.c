@@ -493,6 +493,21 @@ static void grouping(bool) {
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
+static void integer(bool) {
+	int64_t value;
+	int l = parser.previous.length;
+	bool starts_with_zero = parser.previous.start[0] == '0';
+
+	if (l > 2 && starts_with_zero && parser.previous.start[1] == 'x') {
+		value = strtoll(&parser.previous.start[2], NULL, 16);
+	} else if (l > 2 && starts_with_zero && parser.previous.start[1] == 'o') {
+		value = strtoll(&parser.previous.start[2], NULL, 8);
+	} else {
+		value = strtoll(parser.previous.start, NULL, 10);
+	}
+	emitConstant(INT_VAL(value));
+}
+
 static void number(bool) {
 	double value = strtod(parser.previous.start, NULL);
 	emitConstant(NUMBER_VAL(value));
@@ -671,6 +686,7 @@ static ParseRule rules[] = {
 	[TOKEN_LESS_EQUAL]	= {NULL,	binary,		PREC_COMPARISON},
 	[TOKEN_IDENTIFIER]	= {variable,	NULL,		PREC_NONE},
 	[TOKEN_STRING]		= {string,	NULL,		PREC_NONE},
+	[TOKEN_INTEGER]		= {integer,	NULL,		PREC_NONE},
 	[TOKEN_NUMBER]		= {number,	NULL,		PREC_NONE},
 	[TOKEN_AND]		= {NULL,	and_,		PREC_AND},
 	[TOKEN_CLASS]		= {NULL,	NULL,		PREC_NONE},

@@ -28,6 +28,15 @@ static bool isDigit(char c) {
 	return c >= '0' && c <= '9';
 }
 
+static bool isHexDigit(char c) {
+	char k = c & 0x5f;
+	return (c >= '0' && c <= '9') || (k >= 'A' && k <= 'F');
+}
+
+static bool isOctDigit(char c) {
+	return (c >= '0' && c <= '7');
+}
+
 static bool isAtEnd() {
 	return *scanner.current == '\0';
 }
@@ -170,17 +179,33 @@ static Token identifier() {
 }
 
 static Token number() {
-	while (isDigit(peek())) advance();
+	char second = peek();
 
-	// Look for a fractional part
-	if (peek() == '.' && isDigit(peekNext())) {
-		// Consume the '.'
+	if (second == 'x') {
 		advance();
-
-		while (isDigit(peek())) advance();
+		if (!isHexDigit(peek()))
+			return errorToken("Unexpected character after '0x'.");
+		while (isHexDigit(peek())) advance();
 	}
+	else if (second == 'o') {
+		advance();
+		if (!isOctDigit(peek()))
+			return errorToken("Unexpected character after '0o'.");
+		while (isOctDigit(peek())) advance();
+	}
+	else {
+		while (isDigit(peek())) advance();
 
-	return makeToken(TOKEN_NUMBER);
+		// Look for a fractional part
+		if (peek() == '.' && isDigit(peekNext())) {
+			// Consume the '.'
+			advance();
+
+			while (isDigit(peek())) advance();
+			return makeToken(TOKEN_NUMBER);
+		}
+	}
+	return makeToken(TOKEN_INTEGER);
 }
 
 static Token string() {

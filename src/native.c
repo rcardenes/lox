@@ -33,6 +33,12 @@ NativeReturn toStringNative(int argCount, Value* args) {
 		else
 			result.value = OBJ_VAL(takeString("false", 5));
 	}
+	else if (IS_INT(args[0])) {
+		char str[128] = "foobar";
+		int64_t i = AS_INT(args[0]);
+		snprintf(str, 128, "%lld", i);
+		result.value = OBJ_VAL(copyString(str, strlen(str)));
+	}
 	else if (IS_NUMBER(args[0])) {
 		char str[128] = "foobar";
 		double d = AS_NUMBER(args[0]);

@@ -9,6 +9,5 @@ Challenges (from Caleb's site):
     * Shrink the list if it deallocates enough memory
 
 Challenges (own):
-    * Separate integer and float types.
     * Measure the efficiency of list initialization. See how it can be improved
     * Add slicing syntax for list/sequences

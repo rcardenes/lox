@@ -15,14 +15,6 @@
 		return result; \
 	}
 
-static bool isInteger(Value* val) {
-	if (!IS_NUMBER(*val))
-		return false;
-
-	double d = AS_NUMBER(*val);
-	return d == ((int)d);
-}
-
 static NativeReturn createList(int, Value*);
 static NativeReturn append(int, Value*);
 static NativeReturn get(int, Value*);
@@ -68,12 +60,12 @@ NativeReturn get(int argCount, Value* args) {
 	if (!IS_OBJ(args[0]) || !IS_LIST(args[0])) {
 		RET_ERROR("Expected a list as first argument.");
 	}
-	else if (!isInteger(&args[1]) || AS_NUMBER(args[1]) < 0) {
+	else if (!IS_INT(args[1]) || AS_INT(args[1]) < 0) {
 		RET_ERROR("Expected a non-negative integer as second argument.");
 	}
 
 	ObjList* list = AS_LIST(args[0]);
-	int i = (int)AS_NUMBER(args[1]);
+	int64_t i = AS_INT(args[1]);
 
 	if (!isValidListIndex(list, i)) {
 		RET_ERROR("Invalid index %d", i);
@@ -86,12 +78,12 @@ NativeReturn delete(int argCount, Value* args) {
 	if (!IS_OBJ(args[0]) || !IS_LIST(args[0])) {
 		RET_ERROR("Expected a list as first argument.");
 	}
-	else if (!isInteger(&args[1]) || AS_NUMBER(args[1]) < 0) {
+	else if (!IS_INT(args[1]) || AS_INT(args[1]) < 0) {
 		RET_ERROR("Expected a non-negative integer as second argument.");
 	}
 
 	ObjList* list = AS_LIST(args[0]);
-	int i = (int)AS_NUMBER(args[1]);
+	int64_t i = AS_INT(args[1]);
 
 	if (!isValidListIndex(list, i)) {
 		RET_ERROR("Invalid index %d", i);
@@ -117,20 +109,20 @@ NativeReturn slice(int argCount, Value* args) {
 	if (!IS_OBJ(args[0]) || !IS_LIST(args[0])) {
 		RET_ERROR("Expected a list as first argument.");
 	}
-	else if (!isInteger(&args[1]) || AS_NUMBER(args[1]) < 0) {
+	else if (!IS_INT(args[1]) || AS_INT(args[1]) < 0) {
 		RET_ERROR("Expected a non-negative integer as second argument.");
 	}
-	else if (!isInteger(&args[2]) || AS_NUMBER(args[2]) < 0) {
+	else if (!IS_INT(args[2]) || AS_INT(args[2]) < 0) {
 		RET_ERROR("Expected a non-negative integer as third argument.");
 	}
-	else if (!isInteger(&args[3]) || AS_NUMBER(args[3]) < 1) {
+	else if (!IS_INT(args[3]) || AS_INT(args[3]) < 1) {
 		RET_ERROR("Expected a positive integer as fourth argument.");
 	}
 
 	ObjList* list = AS_LIST(args[0]);
-	int start = (int)AS_NUMBER(args[1]);
-	int stop = (int)AS_NUMBER(args[2]);
-	int step = (int)AS_NUMBER(args[3]);
+	int64_t start = AS_INT(args[1]);
+	int64_t stop = AS_INT(args[2]);
+	int64_t step = AS_INT(args[3]);
 	int len = list->items.count;
 
 	if (stop >= len) {
