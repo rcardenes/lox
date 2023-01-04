@@ -67,6 +67,38 @@ ObjInstance* newInstance(ObjClass* klass) {
 	return instance;
 }
 
+static inline bool isValidIndex(int index, int max) {
+	return ((index >= 0) && (index < max))
+	    || ((index < 0) && ((-index) <= max));
+}
+
+void normalizeSlicingIndices(int length, int64_t *start, int64_t *stop, int64_t *step, bool stopIsNil) {
+	int origStart = *start;
+
+	if (*start < 0) {
+		*start = length + *start;
+	}
+	if (*step < 0 && *start >= length) {
+		*start = length - 1;
+	}
+
+	if (!stopIsNil) {
+		if (*stop < 0) {
+			*stop = length + *stop;
+		}
+		if (*step > 0 && *stop >= length) {
+			*stop = length;
+		}
+	}
+	else if (origStart >= 0) {
+		*stop = length + 1;
+	}
+	else {
+		*stop = -1;
+	}
+
+}
+
 ObjList* newList() {
 	ObjList* list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
 	initValueArray(&list->items);
@@ -102,20 +134,16 @@ void deleteFromList(ObjList* list, int index) {
 	maybeShrinkArray(items);
 }
 
-static inline bool isValidIndex(int index, int max) {
-	return ((index >= 0) && (index < max))
-	    || ((index < 0) && ((-index) <= max));
-}
-
 bool isValidListIndex(ObjList* list, int index) {
 	return isValidIndex(index, list->items.count);
 }
 
 ObjList* sliceFromList(ObjList* list, int start, int stop, int step) {
 	ObjList* slice = newList();
+	int len = list->items.count;
 
 	if (step > 0) {
-		for (int i = start; i >= 0 && i < stop; i += step) {
+		for (int i = start; i >= 0 && i < len && i < stop; i += step) {
 			appendToList(slice, indexFromList(list, i));
 		}
 	} else if (stop < start) {
@@ -220,6 +248,30 @@ Value indexFromString(ObjString* string, int index) {
 	newString->string.hash = hashString(newString->buffer, 1);
 
 	return OBJ_VAL(newString);
+}
+
+ObjString* sliceFromString(ObjString* string, int start, int stop, int step) {
+	char buffer[string->length];
+	char *p = &buffer[0];
+	int len = string->length;
+	int sliceLength = 0;
+
+	if (step > 0) {
+		for (int i = start; i >= 0 && i < len && i < stop; i += step, sliceLength++, p++) {
+			*p = string->chars[i];
+		}
+	} else if (stop < start) {
+		for (int i = start; i >= 0 && i > stop; i += step, sliceLength++, p++) {
+			*p = string->chars[i];
+		}
+	}
+
+	ObjStringDynamic* slice = (ObjStringDynamic*)allocateString(sliceLength, hashString(buffer, sliceLength), true);
+	memcpy(slice->buffer, buffer, sliceLength);
+	slice->buffer[sliceLength] = '\0';
+	slice->string.chars = slice->buffer;
+
+	return (ObjString*)slice;
 }
 
 ObjUpvalue* newUpvalue(Value* slot) {

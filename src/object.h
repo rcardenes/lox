@@ -151,12 +151,14 @@ void initStringList(StringList*);
 void addStringToList(StringList*, ObjString*);
 void prependStringToList(StringList*, ObjString*);
 void resetStringList(StringList*);
+ObjString* sliceFromString(ObjString*, int, int, int);
 void appendToList(ObjList*, Value);
 Value indexFromList(ObjList*, int);
 void storeToList(ObjList*, int, Value);
 void deleteFromList(ObjList*, int);
 bool isValidListIndex(ObjList*, int);
 ObjList* sliceFromList(ObjList*, int, int, int);
+void normalizeSlicingIndices(int, int64_t*, int64_t*, int64_t*, bool);
 
 static inline bool isObjType(Value value, ObjType type) {
 	return IS_OBJ(value) && AS_OBJ(value)->type == type;

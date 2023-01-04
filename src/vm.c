@@ -793,6 +793,49 @@ static InterpretResult run() {
 				push(result);
 				break;
 			}
+			case OP_SLICE_SUBSCR:
+			{
+				Value vStep = pop();
+				Value vStop = pop();
+				Value vStart = pop();
+				Value vSliced = pop();
+				Value result;
+
+				if (!IS_INT(vStart) || !(IS_INT(vStop) || IS_NIL(vStop)) || !IS_INT(vStep)) {
+					vmRuntimeError("Slice indices must be integers");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				bool stopIsNil = IS_NIL(vStop);
+				int64_t start = AS_INT(vStart);
+				int64_t stop;
+				int64_t step = AS_INT(vStep);
+
+				if (!stopIsNil)
+					stop = AS_INT(vStop);
+
+				if (IS_LIST(vSliced)) {
+					ObjList* list = AS_LIST(vSliced);
+
+					normalizeSlicingIndices(list->items.count, &start, &stop, &step, stopIsNil);
+
+					result = OBJ_VAL(sliceFromList(list, start, stop, step));
+				}
+				else if (IS_STRING(vSliced)) {
+					ObjString* string = AS_STRING(vSliced);
+
+					normalizeSlicingIndices(string->length, &start, &stop, &step, stopIsNil);
+
+					result = OBJ_VAL(sliceFromString(string, start, stop, step));
+				}
+				else {
+					vmRuntimeError("Invalid type to slice.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				push(result);
+				break;
+			}
 			case OP_STORE_SUBSCR:
 			{
 				Value item = pop();

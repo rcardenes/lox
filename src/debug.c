@@ -205,6 +205,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 		}
 		case OP_INDEX_SUBSCR:
 			return simpleInstruction("OP_INDEX_SUBSCR", offset);
+		case OP_SLICE_SUBSCR:
+			return simpleInstruction("OP_SLICE_SUBSCR", offset);
 		case OP_STORE_SUBSCR:
 			return simpleInstruction("OP_STORE_SUBSCR", offset);
 		case OP_APPEND_TO:

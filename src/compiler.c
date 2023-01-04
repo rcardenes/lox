@@ -653,15 +653,51 @@ static void list(bool) {
 }
 
 static void subscript(bool canAssign) {
-	parsePrecedence(PREC_TERNARY);
-	consume(TOKEN_RIGHT_BRACKET, "Expect ']' after index.");
-
-	if (canAssign && match(TOKEN_EQUAL)) {
-		expression();
-		emitByte(OP_STORE_SUBSCR);
+	// If slicing and there's no first element, it's 0
+	if (!check(TOKEN_COLON)) {
+		parsePrecedence(PREC_TERNARY);
 	}
 	else {
-		emitByte(OP_INDEX_SUBSCR);
+		emitConstant(INT_VAL(0));
+	}
+
+	// Check again if we're slicing, so that we can process the other elements
+	if (check(TOKEN_COLON)) {
+		match(TOKEN_COLON);
+		if (!(check(TOKEN_RIGHT_BRACKET) || check(TOKEN_COLON))) {
+			expression();
+		}
+		else {
+			// Default stop, it will be reinterpreted according to the context
+			emitConstant(NIL_VAL);
+		}
+		// Optional step
+		if (check(TOKEN_COLON)) {
+			match(TOKEN_COLON);
+			expression();
+		}
+		else {
+			emitConstant(INT_VAL(1));
+		}
+		consume(TOKEN_RIGHT_BRACKET, "Expect ']' after slice expression.");
+
+		if (canAssign && match(TOKEN_EQUAL)) {
+			error("Assignment to a slice is not supported.");
+		}
+		else {
+			emitByte(OP_SLICE_SUBSCR);
+		}
+	}
+	else {
+		consume(TOKEN_RIGHT_BRACKET, "Expect ']' after index.");
+
+		if (canAssign && match(TOKEN_EQUAL)) {
+			expression();
+			emitByte(OP_STORE_SUBSCR);
+		}
+		else {
+			emitByte(OP_INDEX_SUBSCR);
+		}
 	}
 }
 
